@@ -29,9 +29,13 @@ source exp/bin/activate
 echo "Installing pip-tools..."
 pip install pip-tools
 
-# 4. Compile requirements.in to requirements.txt
-echo "Compiling requirements.in..."
-pip-compile requirements.in
+# 4. Compile requirements.in ONLY if requirements.txt is missing
+if [ -f "requirements.txt" ]; then
+    echo "Found existing requirements.txt. Skipping compilation."
+else
+    echo "Compiling requirements.in..."
+    pip-compile requirements.in
+fi
 
 # 5. Sync the environment
 echo "Syncing packages..."
