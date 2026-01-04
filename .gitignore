@@ -1,0 +1,14 @@
+# Folder
+__pycache__
+FeatureExtraction
+net/__pycache__
+dataset_module/__pycache__
+archive
+ckpt
+wandb
+PretrainedModels
+
+# File
+.env
+normal.py
+PerformanceLog/*.pth

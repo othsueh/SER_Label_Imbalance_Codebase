@@ -1,0 +1,33 @@
+[base_config]
+project = "Total Set"
+corpus = "MSP-PODCAST"
+origin_upstream_url = "microsoft/wavlm-large"
+upstream_model = "wavlm-large"
+epoch = 30
+batch_size = 16
+learning_rate = 1e-5
+dropout = 0.5
+patience = 5
+verbose = true
+seed = 42
+tags = ["Full set", "Org", "Dual Head"]
+finetune_layers = 3
+num_layers = 3
+use_gender = false
+ckpt_name = "None"
+
+# Remote
+[[experiments]]
+name = "Retraining with Leaky ReLU"
+model_type = "UpstreamFinetune"
+config = "base_config"
+
+[[experiments]]
+name = "Retraining with Leaky ReLU"
+model_type = "UpstreamGender"
+config = "base_config"
+config_update = { use_gender = true, tags = [
+    "Full set",
+    "Gender Head",
+    "Dual Head",
+] }
