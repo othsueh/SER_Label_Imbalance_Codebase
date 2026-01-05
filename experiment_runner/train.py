@@ -104,8 +104,18 @@ def run_train(model_type, **kwargs):
     
     print("Preparing the model")
     # Model
+    ssl_type = kwargs.get('ssl_type', 'wavlm-large')
+    path_to_pretrained = utils.config.get('PATH_TO_PRETRAINED_MODELS')
+    if path_to_pretrained:
+        local_model_path = os.path.join(path_to_pretrained, ssl_type)
+        if os.path.exists(local_model_path):
+            print(f"Loading pretrained model from local path: {local_model_path}")
+            ssl_type = local_model_path
+        else:
+             print(f"Local model path not found: {local_model_path}. Fallback to HuggingFace or default.")
+
     model = SERModel(
-        ssl_type=kwargs.get('ssl_type', 'wavlm-large'), # Should be generic or from config
+        ssl_type=ssl_type, # Should be generic or from config
         pooling_type=kwargs.get('pooling_type', 'AttentiveStatisticsPooling'),
         head_dim=kwargs.get('head_dim', 1024),
         hidden_dim=kwargs.get('hidden_dim', 1024), # Check EmotionRegression init
