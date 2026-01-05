@@ -59,8 +59,9 @@ class WavSet(torch_utils.data.Dataset):
         if self.wav_mean is None or self.wav_std is None:
              if self.lazy:
                  # Use generator to avoid loading all files into memory
+                 from tqdm import tqdm
                  def wav_gen():
-                     for p in self.wav_list:
+                     for p in tqdm(self.wav_list, desc="Computing Normalization Stats"):
                          yield extract_wav(p)
                  self.wav_mean, self.wav_std = normalizer.get_norm_stat_for_wav(wav_gen())
              else:
