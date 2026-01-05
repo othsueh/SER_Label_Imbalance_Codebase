@@ -12,3 +12,4 @@ PretrainedModels
 .env
 normal.py
 PerformanceLog/*.pth
+experiment.py

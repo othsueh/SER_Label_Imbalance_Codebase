@@ -1,5 +1,5 @@
 [base_config]
-project = "Total Set"
+project = "NSTC"
 corpus = "MSP-PODCAST"
 origin_upstream_url = "microsoft/wavlm-large"
 upstream_model = "wavlm-large"
@@ -8,13 +8,16 @@ batch_size = 16
 learning_rate = 1e-5
 dropout = 0.5
 patience = 5
-verbose = true
 seed = 42
 tags = ["Full set", "Org", "Dual Head"]
 finetune_layers = 3
 num_layers = 3
 use_gender = false
 ckpt_name = "None"
+loss_type = "WeightedCrossEntropy"
+pooling_type = "AttentiveStatisticsPooling"
+head_dim = 1024
+hidden_dim = 1024
 
 # Remote
 [[experiments]]
