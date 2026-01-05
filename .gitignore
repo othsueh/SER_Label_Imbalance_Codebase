@@ -6,6 +6,7 @@ dataset_module/__pycache__
 archive
 ckpt
 wandb
+exp
 PretrainedModels
 
 # File
