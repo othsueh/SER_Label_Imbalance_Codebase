@@ -3,6 +3,7 @@ import torch
 import torch.optim as optim
 import wandb
 import numpy as np
+from tqdm.auto import tqdm
 from collections import Counter
 from sklearn.metrics import f1_score, accuracy_score, recall_score
 from torch.utils.data import DataLoader
@@ -55,7 +56,6 @@ def run_train(model_type, **kwargs):
     loss_type = kwargs.get('loss_type', 'WeightedCrossEntropy')
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)
     
     # Init WandB
     wandb.login(key=utils.WANDB_TOKEN)
@@ -141,7 +141,9 @@ def run_train(model_type, **kwargs):
         all_preds = []
         all_targets = []
         
-        for batch in train_loader:
+        # Progress bar for training
+        train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
+        for batch in train_pbar:
             # batch: (wav, dur), label, uttid
             # collate_fn returns: total_wav, total_lab, attention_mask, total_utt
             x, y, mask, _ = batch
@@ -163,6 +165,10 @@ def run_train(model_type, **kwargs):
             
             train_loss += loss.item()
             
+            # Update progress bar
+            train_pbar.set_postfix({'loss': loss.item()})
+            
+            
             preds = torch.argmax(logits, dim=1).cpu().numpy()
             targets = y_indices.cpu().numpy()
             all_preds.extend(preds)
@@ -179,7 +185,9 @@ def run_train(model_type, **kwargs):
         val_targets = []
         
         with torch.no_grad():
-            for batch in val_loader:
+            # Progress bar for validation
+            val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{epochs} [Val]", leave=False)
+            for batch in val_pbar:
                 x, y, mask, _ = batch
                 x = x.to(device)
                 y = y.to(device)
