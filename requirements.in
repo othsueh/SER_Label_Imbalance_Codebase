@@ -6,7 +6,7 @@ datasets
 huggingface_hub
 seaborn
 soundfile
-librosa>=0.10.0
+librosa
 scikit-learn
 tomli
 transformers

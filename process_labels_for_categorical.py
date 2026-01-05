@@ -4,7 +4,7 @@ import pandas as pd
 # categorical emotion recognition model
 
 # Load Original label_consensus.csv file provided with dataset
-df = pd.read_csv('../workspace/MSP-PODCAST/Labels/labels_consensus.csv')
+df = pd.read_csv('/workspace/MSP-PODCAST/Labels/labels_consensus.csv')
 
 # Define the emotions
 emotions = ["Angry", "Sad", "Happy", "Surprise", "Fear", "Disgust", "Contempt", "Neutral"]
