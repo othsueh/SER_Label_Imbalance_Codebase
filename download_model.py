@@ -1,5 +1,6 @@
 from huggingface_hub import snapshot_download
-from utils import config
+from utils import config, HUGGINGFACE_TOKEN
+import os
 
 models = [
     {"model": "wavlm-large", "source": "microsoft/wavlm-large"},
