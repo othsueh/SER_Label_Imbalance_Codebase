@@ -3,7 +3,7 @@ PATH_TO_SAVED_MODELS = "./ckpt/"
 PATH_TO_PERFORMACE = "./PerformanceLog/"
 PATH_TO_CKPT = "./ckpt/"
 
-[MSPPODCAST]
+[MSP-PODCAST]
 PATH_TO_LABEL = '/workspace/MSP-PODCAST/Labels/processed_labels.csv'
 PATH_TO_AUDIO = '/workspace/MSP-PODCAST/Audios'
 PATH_TO_TRANSCRIPT = '/datas/store162/othsueh/MSP-Podcast/Transcripts'

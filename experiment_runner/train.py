@@ -55,8 +55,10 @@ def run_train(model_type, **kwargs):
     loss_type = kwargs.get('loss_type', 'WeightedCrossEntropy')
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(device)
     
     # Init WandB
+    wandb.login(key=utils.WANDB_TOKEN)
     wandb.init(project=project, config=kwargs, reinit=True, tags=kwargs.get('tags', []))
     
     # Dataset Paths Resolution
@@ -85,7 +87,8 @@ def run_train(model_type, **kwargs):
     # Get Norm Stats for Dev
     wav_mean, wav_std = train_dataset.get_norm_stats()
     val_dataset = SERDataset(wav_dir, label_path, split="dev", wav_mean=wav_mean, wav_std=wav_std)
-    
+
+    print("Preparing the data loader")
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=SERDataset.collate_fn, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=SERDataset.collate_fn, num_workers=4)
     
@@ -99,6 +102,7 @@ def run_train(model_type, **kwargs):
     class_counts, class_dist = get_class_distribution(train_labels_int)
     head, mid, tail = identify_head_mid_tail(class_dist)
     
+    print("Preparing the model")
     # Model
     model = SERModel(
         ssl_type=kwargs.get('ssl_type', 'wavlm-large'), # Should be generic or from config
