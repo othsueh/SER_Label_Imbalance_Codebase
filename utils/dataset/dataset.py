@@ -29,10 +29,18 @@ class CombinedSet(torch_utils.data.Dataset):
         return result
 
 
+from utils.data.wav import extract_wav
+import os
+
 class WavSet(torch_utils.data.Dataset): 
     def __init__(self, *args, **kwargs):
         super(WavSet, self).__init__()
-        self.wav_list = kwargs.get("wav_list", args[0]) # (N, D, T)
+        self.wav_list = kwargs.get("wav_list", args[0]) # (N, D, T) or list of paths
+        
+        # Check if we are in lazy mode (list of strings)
+        self.lazy = False
+        if len(self.wav_list) > 0 and isinstance(self.wav_list[0], str):
+            self.lazy = True
 
         self.wav_mean = kwargs.get("wav_mean", None)
         self.wav_std = kwargs.get("wav_std", None)
@@ -41,9 +49,22 @@ class WavSet(torch_utils.data.Dataset):
         self.sampling_rate = kwargs.get("sr", 16000)
 
         # check max duration
-        self.max_dur = np.min([np.max([len(cur_wav) for cur_wav in self.wav_list]), self.upper_bound_max_dur*self.sampling_rate])
+        if self.lazy:
+            # For lazy loading, scanning all files for max_duration can be slow.
+            # We use the upper bound as a safe default.
+            self.max_dur = self.upper_bound_max_dur * self.sampling_rate
+        else:
+            self.max_dur = np.min([np.max([len(cur_wav) for cur_wav in self.wav_list]), self.upper_bound_max_dur*self.sampling_rate])
+
         if self.wav_mean is None or self.wav_std is None:
-            self.wav_mean, self.wav_std = normalizer. get_norm_stat_for_wav(self.wav_list)
+             if self.lazy:
+                 # Use generator to avoid loading all files into memory
+                 def wav_gen():
+                     for p in self.wav_list:
+                         yield extract_wav(p)
+                 self.wav_mean, self.wav_std = normalizer.get_norm_stat_for_wav(wav_gen())
+             else:
+                 self.wav_mean, self.wav_std = normalizer.get_norm_stat_for_wav(self.wav_list)
     
     def save_norm_stat(self, norm_stat_file):
         with open(norm_stat_file, 'wb') as f:
@@ -53,7 +74,15 @@ class WavSet(torch_utils.data.Dataset):
         return len(self.wav_list)
 
     def __getitem__(self, idx):
-        cur_wav = self.wav_list[idx][:self.max_dur]
+        if self.lazy:
+            cur_wav = extract_wav(self.wav_list[idx])
+        else:
+            cur_wav = self.wav_list[idx]
+            
+        # Slice to max_dur
+        if len(cur_wav) > self.max_dur:
+            cur_wav = cur_wav[:int(self.max_dur)]
+        
         cur_dur = len(cur_wav)
         cur_wav = (cur_wav - self.wav_mean) / (self.wav_std+0.000001)
         

@@ -3,7 +3,7 @@ import torch
 import pickle as pk
 from torch.utils.data import Dataset, DataLoader
 from utils.data.podcast import load_cat_emo_label
-from utils.data.wav import load_audio
+from utils.data.wav import extract_wav # load_audio unused
 from utils.dataset.dataset import WavSet, CAT_EmoSet
 
 class SERDataset(Dataset):
@@ -23,14 +23,25 @@ class SERDataset(Dataset):
         
         # Load labels and audio paths
         self.filenames, self.labels = load_cat_emo_label(label_path, split)
-        self.wav_paths = load_audio(audio_path, self.filenames)
         
+        # Lazy Loading: Construct full paths instead of loading audio data
+        # self.wav_paths = load_audio(audio_path, self.filenames) # Removed eager loading
+        self.wav_paths = [os.path.join(audio_path, f) for f in self.filenames]
+        
+        # Try to load existing stats if available and not provided
+        if split == "train" and save_norm_path and os.path.exists(save_norm_path) and (wav_mean is None or wav_std is None):
+            from utils.dataset.dataset import load_norm_stat
+            print(f"Loading normalization stats from {save_norm_path}")
+            wav_mean, wav_std = load_norm_stat(save_norm_path)
+
         # Initialize sub-datasets
+        # Pass paths (self.wav_paths) to WavSet, which now supports lazy loading
         self.wav_set = WavSet(self.wav_paths, wav_mean=wav_mean, wav_std=wav_std)
         self.emo_set = CAT_EmoSet(self.labels)
         
-        # Save stats if training
-        if split == "train" and save_norm_path:
+        # Save stats if training and they were computed (not loaded)
+        # Note: WavSet computes them if not provided. We should check if they need saving.
+        if split == "train" and save_norm_path and not os.path.exists(save_norm_path):
             os.makedirs(os.path.dirname(save_norm_path), exist_ok=True)
             self.wav_set.save_norm_stat(save_norm_path)
 
