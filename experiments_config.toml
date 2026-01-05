@@ -21,16 +21,16 @@ hidden_dim = 1024
 
 # Remote
 [[experiments]]
-name = "Retraining with Leaky ReLU"
+name = "Testing"
 model_type = "UpstreamFinetune"
 config = "base_config"
 
-[[experiments]]
-name = "Retraining with Leaky ReLU"
-model_type = "UpstreamGender"
-config = "base_config"
-config_update = { use_gender = true, tags = [
-    "Full set",
-    "Gender Head",
-    "Dual Head",
-] }
+#[[experiments]]
+#name = "Retraining with Leaky ReLU"
+#model_type = "UpstreamGender"
+#config = "base_config"
+#config_update = { use_gender = true, tags = [
+#    "Full set",
+#    "Gender Head",
+#    "Dual Head",
+#] }

@@ -4,7 +4,7 @@ FeatureExtraction
 net/__pycache__
 dataset_module/__pycache__
 archive
-ckpt
+#ckpt
 wandb
 exp
 PretrainedModels
