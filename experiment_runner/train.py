@@ -128,6 +128,46 @@ def run_train(model_type, **kwargs):
     # Loss
     criterion = get_loss_module(loss_type, class_counts, device)
     
+    # --- Debug: Model Parameter Status ---
+    print("\n" + "="*40)
+    print("Checking Model Parameter Status...")
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    frozen_params = total_params - trainable_params
+    
+    print(f"Total Parameters: {total_params:,}")
+    print(f"Trainable Parameters: {trainable_params:,} ({trainable_params/total_params:.2%})")
+    print(f"Frozen Parameters:    {frozen_params:,} ({frozen_params/total_params:.2%})")
+    
+    # Check specific SSL layers
+    if hasattr(model, 'ssl_model') and hasattr(model.ssl_model, 'encoder'):
+        print("\nChecking SSL Encoder Layer Status:")
+        layers = model.ssl_model.encoder.layers
+        print(f"Total SSL Layers: {len(layers)}")
+        
+        # Check first layer (should be frozen)
+        first_layer_grad = any(p.requires_grad for p in layers[0].parameters())
+        print(f"Layer 0 (Bottom): {'TRAINABLE' if first_layer_grad else 'FROZEN'}")
+        
+        # Check last layer (should be trainable if finetune > 0)
+        last_layer_grad = any(p.requires_grad for p in layers[-1].parameters())
+        print(f"Layer {len(layers)-1} (Top):    {'TRAINABLE' if last_layer_grad else 'FROZEN'}")
+        
+        # Check cut-off point
+        finetune_n = kwargs.get('finetune_layers', 3)
+        if 0 < finetune_n < len(layers):
+            boundary_layer = layers[-(finetune_n + 1)]
+            boundary_grad = any(p.requires_grad for p in boundary_layer.parameters())
+            print(f"Layer {len(layers)-(finetune_n+1)} (Boundary): {'TRAINABLE' if boundary_grad else 'FROZEN'} (Expected FROZEN)")
+    print("="*40 + "\n")
+    
+    wandb.config.update({
+        "total_params": total_params,
+        "trainable_params": trainable_params,
+        "frozen_params": frozen_params
+    }, allow_val_change=True)
+    # -------------------------------------
+    
     # Optimizer
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     
