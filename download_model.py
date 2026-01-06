@@ -3,7 +3,8 @@ from utils import config, HUGGINGFACE_TOKEN
 import os
 
 models = [
-    {"model": "wavlm-large", "source": "microsoft/wavlm-large"},
+    # {"model": "wavlm-large", "source": "microsoft/wavlm-large"},
+    {"model": "wavlm-base-plus", "source": "microsoft/wavlm-base-plus"}
     ]
 
 if __name__ == "__main__":

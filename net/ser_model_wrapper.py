@@ -9,16 +9,13 @@ class SERModel(nn.Module):
         super(SERModel, self).__init__()
         
         # 1. SSL Model
-        # Using PyTorch 2.0 SDPA (Scaled Dot Product Attention) for speedup
-        # This is usually the default in newer transformers, but ensuring it is explicit.
         try:
-             self.ssl_model = AutoModel.from_pretrained(ssl_type, attn_implementation="sdpa", torch_dtype=torch.float16)
-             print("Successfully loaded WavLM with SDPA (Scaled Dot Product Attention).")
-        except Exception as e:
-             # Fallback to default if sdpa not supported or error
-             print(f"Could not enable SDPA: {e}. Fallback to default.")
-             self.ssl_model = AutoModel.from_pretrained(ssl_type)
-
+            self.ssl_model = AutoModel.from_pretrained(ssl_type)
+        except OSError:
+            # If local path fails or not found, try generic load or raise
+            print(f"Warning: Could not load from {ssl_type}, trying default or checking path...")
+            raise
+            
         self.ssl_model.freeze_feature_encoder()
         
         # Partial Fine-tuning
