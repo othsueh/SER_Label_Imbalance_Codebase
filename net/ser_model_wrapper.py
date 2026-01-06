@@ -9,12 +9,14 @@ class SERModel(nn.Module):
         super(SERModel, self).__init__()
         
         # 1. SSL Model
-        # Using Flash Attention 2 if available for speedup
+        # Using PyTorch 2.0 SDPA (Scaled Dot Product Attention) for speedup
+        # This is usually the default in newer transformers, but ensuring it is explicit.
         try:
-             self.ssl_model = AutoModel.from_pretrained(ssl_type, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
-             print("Successfully loaded WavLM with Flash Attention 2.")
+             self.ssl_model = AutoModel.from_pretrained(ssl_type, attn_implementation="sdpa", torch_dtype=torch.float16)
+             print("Successfully loaded WavLM with SDPA (Scaled Dot Product Attention).")
         except Exception as e:
-             print(f"Could not enable Flash Attention 2: {e}. Fallback to default.")
+             # Fallback to default if sdpa not supported or error
+             print(f"Could not enable SDPA: {e}. Fallback to default.")
              self.ssl_model = AutoModel.from_pretrained(ssl_type)
 
         self.ssl_model.freeze_feature_encoder()
