@@ -337,47 +337,12 @@ def run_train(model_type, **kwargs):
                 
     wandb.finish()
     
+    
     # --- HF Hub Upload ---
-    try:
-        print("\n" + "="*40)
-        print("Initiating Hugging Face Hub Upload...")
-        from huggingface_hub import HfApi, create_repo
-        
-        # Construct model name: corpus + model + loss_type
-        # Clean naming: replace / with _ in model name
-        corpus_name = kwargs.get('corpus', 'MSP-PODCAST')
-        upstream = kwargs.get('upstream_model', 'wavlm-base-plus').replace('/', '_')
-        loss_name = kwargs.get('loss_type', 'WeightedCrossEntropy')
-        
-        repo_name = f"{corpus_name}_{upstream}_{loss_name}"
-        
-        api = HfApi()
-        user_info = api.whoami()
-        username = user_info['name']
-        repo_id = f"{username}/{repo_name}"
-        
-        print(f"Target Repo ID: {repo_id}")
-        
-        # Create repo (private=True by default to be safe)
-        create_repo(repo_id, private=True, exist_ok=True)
-        
-        # Upload
-        save_path = kwargs.get('save_path', 'ckpt/best_model')
-        if os.path.exists(save_path) and os.path.isdir(save_path):
-            print(f"Uploading files from {save_path} ...")
-            api.upload_folder(
-                folder_path=save_path,
-                repo_id=repo_id,
-                repo_type="model"
-            )
-            print(f"Upload complete! Model available at https://huggingface.co/{repo_id}")
-        else:
-            print(f"Error: Save path {save_path} is not a directory or does not exist.")
-            
-    except ImportError:
-        print("huggingface_hub library not found. Skipping upload.")
-        print("Install with: pip install huggingface_hub")
-    except Exception as e:
-        print(f"An error occurred during HF upload: {e}")
-        print("Ensure you are logged in with 'huggingface-cli login' or have HF_TOKEN set.")
-    print("="*40 + "\n")
+    from utils.hf_uploader import upload_model_to_hf
+    upload_model_to_hf(
+        corpus_name=kwargs.get('corpus', 'MSP-PODCAST'),
+        upstream_model=kwargs.get('upstream_model', 'wavlm-base-plus'),
+        loss_type=kwargs.get('loss_type', 'WeightedCrossEntropy'),
+        save_path=kwargs.get('save_path', 'ckpt/best_model')
+    )

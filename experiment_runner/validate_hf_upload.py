@@ -51,16 +51,85 @@ def main():
             model.save_pretrained(temp_dir)
             
             # 3. Upload
-            print(f"Uploading to HF Hub: {args.repo_id}...")
-            api = HfApi()
-            create_repo(args.repo_id, private=True, exist_ok=True)
+            from utils.hf_uploader import upload_model_to_hf
+            # Note: utils.hf_uploader handles naming internally based on corpus/upstream/loss
+            # Our parser takes full repo_id. 
+            # To test the utility exactly as used in train.py, we should pass components that result in the repo_id.
+            # But the user asked for "repo_id" validation...
             
-            api.upload_folder(
-                folder_path=temp_dir,
-                repo_id=args.repo_id,
-                repo_type="model"
-            )
-            print("Upload successful!")
+            # If we strictly want to test the wrapper, we might need to deconstruct repo_id? 
+            # Or we just use the wrapper and let it generate the name, but then we must know what it generates to download.
+            
+            # Actually, let's keep the manual upload logic HERE if we want to validate a specific repo_id passed by arg.
+            # OR better: use the wrapper but override the params to match the args.repo_id if possible?
+            # The wrapper does: repo_name = f"{corpus_name}_{upstream}_{loss_type}"
+            # Repository = username/repo_name.
+            
+            # Let's trust the user wants to test the "mechanism".
+            # If I use the wrapper, I force a naming convention.
+            # Let's say we assume the user provides a repo_id that fits the convention OR we just test the upload function with dummy params and ignore the arg.repo_id for the *upload* part?
+            
+            # Wait, the user said "Wrap the upload method... and remember to setup login".
+            # The validation script 'validate_hf_upload.py' was written by me. 
+            # I should update it to use the new utility to PROVE the utility works.
+            
+            # Let's split the repo_id arg to feed into the function.
+            full_repo = args.repo_id # e.g. user/MSP-PODCAST_wavlm-base-plus_InfoNCE
+            if '/' in full_repo:
+                username, repo_name = full_repo.split('/')
+            else:
+                repo_name = full_repo
+            
+            # Attempt to split repo_name by _ to guess components? 
+            # That's validation specific logic. 
+            # For simplicity, let's just CALL the function with kwargs that make sense.
+            
+            # Actually, to properly verify the utility, we should use it.
+            # But the utility autogenerates the name.
+            # Let's just use the utility logic directly? 
+            # I'll modify the validation script to take separate args OR just hardcode dummy ones for the upload test?
+            
+            # Let's stick to using the utility, and PRINT what expected repo_id is.
+            
+            print("Using utils.hf_uploader.upload_model_to_hf...")
+            # We need to match the signature: (corpus_name, upstream_model, loss_type, save_path)
+            # We'll use dummy values that result in a predictable name, effectively ignoring args.repo_id for the GENERATION part if we want to test the tool exactly.
+            # BUT args.repo_id is required for download.
+            
+            # Compromise: I will use the wrapper with specific values, and print what the resulting repo_id is, 
+            # and ask the user to ensure args.repo_id matches it or update args.repo_id logic in script.
+            
+            # Actually, simpler: I'll use the API directly in validation script to keep it flexible for ANY repo_id,
+            # BUT verify that I can import the utility.
+            # The user's request was about "experiment_runner/train.py".
+            # The validation script is a test artifact.
+            
+            # However, using the new utility here is a good integration test.
+            
+            # Let's define dummy vars:
+            corpus = "TEST-CORPUS"
+            upstream = "test_model"
+            loss = "test_loss"
+            
+            upload_model_to_hf(corpus, upstream, loss, temp_dir)
+            
+            # The uploaded repo/URL will be username/TEST-CORPUS_test_model_test_loss
+            # We override args.repo_id to this value for the download step.
+            
+            api = HfApi()
+            username = api.whoami()['name']
+            generated_repo_id = f"{username}/{corpus}_{upstream}_{loss}"
+            print(f"Start using generated repo_id: {generated_repo_id}")
+            args.repo_id = generated_repo_id 
+            
+        except ImportError:
+             print("Could not import utils.hf_uploader or other dependency.")
+             sys.exit(1)
+        except Exception as e:
+            print(f"Upload simulation failed: {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
             
             # Cleanup
             shutil.rmtree(temp_dir)
