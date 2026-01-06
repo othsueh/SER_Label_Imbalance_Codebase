@@ -1,26 +1,28 @@
 import os
 import librosa
+import soundfile as sf
+import numpy as np
 from tqdm import tqdm
 from multiprocessing import Pool
 
-import torch
-import torchaudio
-
 # Load audio
 def extract_wav(wav_path):
-    # Using torchaudio for faster loading
-    wav, sr = torchaudio.load(wav_path)
+    # Use soundfile for fast loading
+    wav, sr = sf.read(wav_path)
     
+    # ensure float32
+    wav = wav.astype(np.float32)
+
+    # Convert to mono if multi-channel (N, C) -> (C, N) or just (N,)
+    if wav.ndim > 1:
+        # soundfile returns (samples, channels), we want to avg across channels
+        wav = np.mean(wav, axis=1)
+        
     if sr != 16000:
-        resampler = torchaudio.transforms.Resample(orig_freq=sr, new_freq=16000)
-        wav = resampler(wav)
+        # Only resample if necessary (slow, but soundfile covers the fast path)
+        wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
         
-    # Convert to mono if needed (average across channels)
-    if wav.shape[0] > 1:
-        wav = torch.mean(wav, dim=0, keepdim=True)
-        
-    # Squeeze to (T,) and convert to numpy to match librosa behavior
-    return wav.squeeze().numpy()
+    return wav
 def load_audio(audio_path, utts, nj=24):
     # Audio path: directory of audio files
     # utts: list of utterance names with .wav extension
