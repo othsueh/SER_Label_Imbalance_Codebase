@@ -57,7 +57,7 @@ def run_train(model_type, **kwargs):
     patience = kwargs.get('patience', 5)
     loss_type = kwargs.get('loss_type', 'WeightedCrossEntropy')
     use_amp = kwargs.get('use_amp', True)
-    gradient_checkpointing = kwargs.get('gradient_checkpointing', True)
+    gradient_checkpointing = kwargs.get('gradient_checkpointing', False) # Disabled by default due to OOM
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -106,6 +106,7 @@ def run_train(model_type, **kwargs):
     class_counts, class_dist = get_class_distribution(train_labels_int)
     head, mid, tail = identify_head_mid_tail(class_dist)
     
+    print(f"Memory before model load: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
     print("Preparing the model")
     # Model
     ssl_type = kwargs.get('ssl_type', 'wavlm-large')
@@ -150,6 +151,7 @@ def run_train(model_type, **kwargs):
     print(f"Total Parameters: {total_params:,}")
     print(f"Trainable Parameters: {trainable_params:,} ({trainable_params/total_params:.2%})")
     print(f"Frozen Parameters:    {frozen_params:,} ({frozen_params/total_params:.2%})")
+    print(f"Memory after model load: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
     
     # Check specific SSL layers
     if hasattr(model, 'ssl_model') and hasattr(model.ssl_model, 'encoder'):
@@ -197,7 +199,7 @@ def run_train(model_type, **kwargs):
         # Progress bar for training
         train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
         iter_start_time = time.time()
-        for batch in train_pbar:
+        for i, batch in enumerate(train_pbar):
             # batch: (wav, dur), label, uttid
             # collate_fn returns: total_wav, total_lab, attention_mask, total_utt
             data_start_time = time.time()
@@ -208,6 +210,11 @@ def run_train(model_type, **kwargs):
             y = y.to(device)
             mask = mask.to(device)
             
+            # Debug: check graph
+            # if epoch == 0 and i == 0:
+            #    print(f"x requires_grad: {x.requires_grad}")
+
+            
             # y in dataset is probabilities/one-hot. Criterion expects class indices for CE usually, 
             # unless using SoftLabel CE. PyTorch CE expects indices.
             # Convert y to indices
@@ -215,11 +222,21 @@ def run_train(model_type, **kwargs):
             
             optimizer.zero_grad()
             
+            if i == 0 and epoch == 0:
+                print(f"Mem before forward: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
+
             with autocast(enabled=use_amp):
                 logits = model(x, attention_mask=mask)
                 loss = criterion(logits, y_indices) # WeightedResampledCrossEntropyLoss wraps CE, expects indices
             
+            if i == 0 and epoch == 0:
+                print(f"Mem after forward: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
+
             scaler.scale(loss).backward()
+            
+            if i == 0 and epoch == 0:
+                print(f"Mem after backward: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
+
             scaler.step(optimizer)
             scaler.update()
             
