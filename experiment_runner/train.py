@@ -241,7 +241,7 @@ def run_train(model_type, **kwargs):
             if i == 0 and epoch == 0:
                 print(f"Mem before forward: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
 
-            with autocast(enabled=use_amp):
+            with autocast(enabled=use_amp, device_type='cuda'):
                 logits = model(x, attention_mask=mask)
                 loss = criterion(logits, y_indices) # WeightedResampledCrossEntropyLoss wraps CE, expects indices
             
