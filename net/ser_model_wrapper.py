@@ -9,7 +9,14 @@ class SERModel(nn.Module):
         super(SERModel, self).__init__()
         
         # 1. SSL Model
-        self.ssl_model = AutoModel.from_pretrained(ssl_type)
+        # Using Flash Attention 2 if available for speedup
+        try:
+             self.ssl_model = AutoModel.from_pretrained(ssl_type, attn_implementation="flash_attention_2", torch_dtype=torch.float16)
+             print("Successfully loaded WavLM with Flash Attention 2.")
+        except Exception as e:
+             print(f"Could not enable Flash Attention 2: {e}. Fallback to default.")
+             self.ssl_model = AutoModel.from_pretrained(ssl_type)
+
         self.ssl_model.freeze_feature_encoder()
         
         # Partial Fine-tuning
