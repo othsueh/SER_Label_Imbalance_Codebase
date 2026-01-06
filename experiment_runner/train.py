@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 from collections import Counter
 from sklearn.metrics import f1_score, accuracy_score, recall_score
 from torch.utils.data import DataLoader
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 from dataset_module.ser_dataset import SERDataset
 from net.ser_model_wrapper import SERModel
 from net.loss_modules import get_loss_module
@@ -93,8 +93,24 @@ def run_train(model_type, **kwargs):
     val_dataset = SERDataset(wav_dir, label_path, split="dev", wav_mean=wav_mean, wav_std=wav_std)
 
     print("Preparing the data loader")
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=SERDataset.collate_fn, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=SERDataset.collate_fn, num_workers=4)
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=batch_size, 
+        shuffle=True, 
+        collate_fn=SERDataset.collate_fn, 
+        num_workers=4,
+        pin_memory=True, # Speed up host-to-device transfer
+        prefetch_factor=2
+    )
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=batch_size, 
+        shuffle=False, 
+        collate_fn=SERDataset.collate_fn, 
+        num_workers=4,
+        pin_memory=True,
+        prefetch_factor=2
+    )
     
     # Class Distribution & Groups
     # Convert labels to int for counting if they are not
