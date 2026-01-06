@@ -109,7 +109,7 @@ def run_train(model_type, **kwargs):
     print(f"Memory before model load: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
     print("Preparing the model")
     # Model
-    ssl_type = kwargs.get('ssl_type', 'wavlm-large')
+    ssl_type = kwargs.get('upstream_model', 'wavlm-large')
     path_to_pretrained = utils.config.get('PATH_TO_PRETRAINED_MODELS')
     if path_to_pretrained:
         local_model_path = os.path.join(path_to_pretrained, ssl_type)
