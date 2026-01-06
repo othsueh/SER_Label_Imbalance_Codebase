@@ -3,10 +3,12 @@ import torch
 import torch.optim as optim
 import wandb
 import numpy as np
+import time
 from tqdm.auto import tqdm
 from collections import Counter
 from sklearn.metrics import f1_score, accuracy_score, recall_score
 from torch.utils.data import DataLoader
+from torch.cuda.amp import autocast, GradScaler
 from dataset_module.ser_dataset import SERDataset
 from net.ser_model_wrapper import SERModel
 from net.loss_modules import get_loss_module
@@ -54,6 +56,8 @@ def run_train(model_type, **kwargs):
     learning_rate = kwargs.get('learning_rate', 1e-4) # 'learning_rate' in config
     patience = kwargs.get('patience', 5)
     loss_type = kwargs.get('loss_type', 'WeightedCrossEntropy')
+    use_amp = kwargs.get('use_amp', True)
+    gradient_checkpointing = kwargs.get('gradient_checkpointing', True)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -123,6 +127,14 @@ def run_train(model_type, **kwargs):
         dropout=kwargs.get('dropout', 0.2),
         finetune_layers=kwargs.get('finetune_layers', 3)
     )
+    
+    if gradient_checkpointing:
+        print("Enabling Gradient Checkpointing for SSL Model")
+        if hasattr(model.ssl_model, "gradient_checkpointing_enable"):
+            model.ssl_model.gradient_checkpointing_enable()
+        else:
+            print("Warning: Model does not support gradient_checkpointing_enable")
+            
     model.to(device)
     
     # Loss
@@ -170,6 +182,7 @@ def run_train(model_type, **kwargs):
     
     # Optimizer
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    scaler = GradScaler(enabled=use_amp)
     
     # Training Loop
     best_val_loss = float('inf')
@@ -183,9 +196,13 @@ def run_train(model_type, **kwargs):
         
         # Progress bar for training
         train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
+        iter_start_time = time.time()
         for batch in train_pbar:
             # batch: (wav, dur), label, uttid
             # collate_fn returns: total_wav, total_lab, attention_mask, total_utt
+            data_start_time = time.time()
+            data_time = data_start_time - iter_start_time
+            
             x, y, mask, _ = batch
             x = x.to(device)
             y = y.to(device)
@@ -197,16 +214,22 @@ def run_train(model_type, **kwargs):
             y_indices = torch.argmax(y, dim=1)
             
             optimizer.zero_grad()
-            logits = model(x, attention_mask=mask)
             
-            loss = criterion(logits, y_indices) # WeightedResampledCrossEntropyLoss wraps CE, expects indices
-            loss.backward()
-            optimizer.step()
+            with autocast(enabled=use_amp):
+                logits = model(x, attention_mask=mask)
+                loss = criterion(logits, y_indices) # WeightedResampledCrossEntropyLoss wraps CE, expects indices
+            
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            
+            compute_time = time.time() - data_start_time
+            iter_start_time = time.time() # Reset for next iter
             
             train_loss += loss.item()
             
             # Update progress bar
-            train_pbar.set_postfix({'loss': loss.item()})
+            train_pbar.set_postfix({'loss': loss.item(), 'dt': f"{data_time:.2f}s", 'ct': f"{compute_time:.2f}s"})
             
             
             preds = torch.argmax(logits, dim=1).cpu().numpy()
