@@ -41,6 +41,17 @@ class SERModel(nn.Module):
                  if pooling_type != "AttentiveStatisticsPooling":
                      raise ValueError(f"Unsupported pooling type: {pooling_type}")
 
+        # Store config for saving
+        self.config = {
+            "ssl_type": ssl_type,
+            "pooling_type": pooling_type,
+            "head_dim": head_dim,
+            "hidden_dim": hidden_dim,
+            "classifier_output_dim": classifier_output_dim,
+            "dropout": dropout,
+            "finetune_layers": finetune_layers
+        }
+
         # 3. Emotion Regression (Classification Head)
         # Note: EmotionRegression init args match net/ser.py: input_dim, hidden_dim, num_layers, output_dim
         # Hardcoding num_layers=1 based on train_cat_ser.py usage (1, 8) 
@@ -76,6 +87,32 @@ class SERModel(nn.Module):
     
     def save_pretrained(self, save_directory):
         import os
+        import json
         os.makedirs(save_directory, exist_ok=True)
         torch.save(self.state_dict(), os.path.join(save_directory, "pytorch_model.bin"))
-        # Save config if needed, or rely on reconstruction
+        
+        # Save config
+        with open(os.path.join(save_directory, "config.json"), "w") as f:
+            json.dump(self.config, f, indent=4)
+            
+    @classmethod
+    def from_pretrained(cls, load_directory):
+        import os
+        import json
+        
+        config_path = os.path.join(load_directory, "config.json")
+        model_path = os.path.join(load_directory, "pytorch_model.bin")
+        
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config not found at {config_path}")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model weights not found at {model_path}")
+            
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        
+        model = cls(**config)
+        state_dict = torch.load(model_path, map_location="cpu")
+        model.load_state_dict(state_dict)
+        
+        return model

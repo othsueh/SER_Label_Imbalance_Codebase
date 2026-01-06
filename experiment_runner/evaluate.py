@@ -47,7 +47,7 @@ def run_evaluate(model_type, **kwargs):
     # SERDataset __init__ loads it? No, SERDataset takes wav_mean/std as args.
     # We should load stats from file if possible.
     # train.py saved it to 'ckpt/norm.pkl' (default in my impl).
-    norm_path = kwargs.get('norm_path', 'ckpt/norm.pkl')
+    norm_path = kwargs.get('norm_path', 'stat/norm.pkl')
     wav_mean, wav_std = None, None
     if os.path.exists(norm_path):
         from utils.dataset.dataset import load_norm_stat
@@ -56,27 +56,35 @@ def run_evaluate(model_type, **kwargs):
     eval_dataset = SERDataset(wav_dir, label_path, split=split, wav_mean=wav_mean, wav_std=wav_std)
     eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=False, collate_fn=SERDataset.collate_fn, num_workers=4)
     
-    # Model Setup
-    model = SERModel(
-        ssl_type=kwargs.get('ssl_type', 'wavlm-large'),
-        pooling_type=kwargs.get('pooling_type', 'AttentiveStatisticsPooling'),
-        head_dim=kwargs.get('head_dim', 1024),
-        hidden_dim=kwargs.get('hidden_dim', 1024),
-        classifier_output_dim=len(class_counts),
-        dropout=kwargs.get('dropout', 0.2), # dropout doesn't matter for eval
-        finetune_layers=0 # not finetuning
-    )
-    
-    # Load Weights
-    # If model_path is directory (save_pretrained)
-    if os.path.isdir(model_path):
-        weights_path = os.path.join(model_path, "pytorch_model.bin")
-        state_dict = torch.load(weights_path, map_location=device)
-        model.load_state_dict(state_dict)
+    # Validating Model Loading Strategy
+    use_from_pretrained = False
+    if os.path.isdir(model_path) and os.path.exists(os.path.join(model_path, "config.json")):
+        use_from_pretrained = True
+        print(f"Detected config.json in {model_path}. Using SERModel.from_pretrained...")
+        model = SERModel.from_pretrained(model_path)
     else:
-        # Assume it's a file
-        state_dict = torch.load(model_path, map_location=device)
-        model.load_state_dict(state_dict)
+        print("Initializing model from arguments and loading weights...")
+        # Model Setup
+        model = SERModel(
+            ssl_type=kwargs.get('ssl_type', 'wavlm-large'),
+            pooling_type=kwargs.get('pooling_type', 'AttentiveStatisticsPooling'),
+            head_dim=kwargs.get('head_dim', 1024),
+            hidden_dim=kwargs.get('hidden_dim', 1024),
+            classifier_output_dim=len(class_counts),
+            dropout=kwargs.get('dropout', 0.2), # dropout doesn't matter for eval
+            finetune_layers=0 # not finetuning
+        )
+        
+        # Load Weights
+        # If model_path is directory (save_pretrained)
+        if os.path.isdir(model_path):
+            weights_path = os.path.join(model_path, "pytorch_model.bin")
+            state_dict = torch.load(weights_path, map_location=device)
+            model.load_state_dict(state_dict)
+        else:
+            # Assume it's a file
+            state_dict = torch.load(model_path, map_location=device)
+            model.load_state_dict(state_dict)
         
     model.to(device)
     model.eval()
