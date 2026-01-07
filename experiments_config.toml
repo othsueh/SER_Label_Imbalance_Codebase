@@ -4,12 +4,12 @@ corpus = "MSP-PODCAST"
 origin_upstream_url = "microsoft/wavlm-base-plus"
 upstream_model = "wavlm-base-plus"
 epoch = 30
-batch_size = 16                                      # Can likely increase to 32 or 64 with Base model
+batch_size = 16                                   # Can likely increase to 32 or 64 with Base model
 learning_rate = 1e-5
 dropout = 0.5
 patience = 5
 seed = 42
-tags = ["Full set", "Org", "Dual Head", "Base Plus"]
+tags = ["Re-weighting"]
 finetune_layers = 3
 num_layers = 3
 use_gender = false
@@ -21,9 +21,11 @@ hidden_dim = 768
 
 # Remote
 [[experiments]]
-name = "Testing"
+name = "UpstreamFinetune-Reweight"
 model_type = "UpstreamFinetune"
 config = "base_config"
+config_update = { loss_type = "WeightedCrossEntropy" }
+#BalancedSoftmax Softmax Focal
 
 #[[experiments]]
 #name = "Retraining with Leaky ReLU"
