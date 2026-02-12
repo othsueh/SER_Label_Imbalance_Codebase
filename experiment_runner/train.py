@@ -20,11 +20,22 @@ def get_class_distribution(labels):
     dist = {k: v/total for k, v in counts.items()}
     return counts, dist
 
-def identify_head_mid_tail(dist):
-    head = [k for k, v in dist.items() if v > 0.10]
-    mid = [k for k, v in dist.items() if 0.05 <= v <= 0.10]
-    tail = [k for k, v in dist.items() if v < 0.05]
-    return head, mid, tail
+def identify_head_mid_tail(corpus):
+    if corpus == 'MSP-PODCAST':
+        # Predefined splits based on known distribution
+        head = [2, 7] # Happy, Neutral
+        mid = [0, 1]   # Angry, Sad
+        tail = [3, 4, 5, 6]  # Surprise, Fear, Disgust, Contempt
+        return head, mid, tail
+    elif corpus == 'BIIC-PODCAST':
+        # not yet defined
+        # head = [0] # Neutral
+        # mid = [1, 2]   # Happy, Sad
+        # tail = [3, 4, 5, 6, 7]  # Angry, Surprise, Fear, Disgust, Contempt
+        return [], [], []  # Placeholder until defined
+    else: 
+        raise ValueError(f"Corpus '{corpus}' not recognized for head/mid/tail splits. Please define them in identify_head_mid_tail function.")
+
 
 def calculate_group_metrics(true_labels, pred_labels, head, mid, tail):
     true_labels = np.array(true_labels)
@@ -147,7 +158,7 @@ def run_train(model_type, **kwargs):
     # We need integer labels for counting.
     train_labels_int = np.argmax(train_dataset.labels, axis=1)
     class_counts, class_dist = get_class_distribution(train_labels_int)
-    head, mid, tail = identify_head_mid_tail(class_dist)
+    head, mid, tail = identify_head_mid_tail(corpus)
     
     print(f"Memory before model load: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
     print("Preparing the model")
