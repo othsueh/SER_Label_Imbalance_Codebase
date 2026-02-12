@@ -29,14 +29,14 @@ def identify_head_mid_tail(dist):
 def calculate_group_metrics(true_labels, pred_labels, head, mid, tail):
     true_labels = np.array(true_labels)
     pred_labels = np.array(pred_labels)
-    
+
     metrics = {}
-    
+
     for group_name, group_classes in [("head", head), ("mid", mid), ("tail", tail)]:
         if not group_classes:
             metrics[f"{group_name}_acc"] = 0.0
             continue
-            
+
         mask = np.isin(true_labels, group_classes)
         if np.sum(mask) == 0:
             metrics[f"{group_name}_acc"] = 0.0
@@ -44,8 +44,26 @@ def calculate_group_metrics(true_labels, pred_labels, head, mid, tail):
             group_true = true_labels[mask]
             group_pred = pred_labels[mask]
             metrics[f"{group_name}_acc"] = accuracy_score(group_true, group_pred)
-            
+
     return metrics
+
+def calculate_sma(history, window):
+    """
+    Calculate Simple Moving Average of validation macro-F1.
+
+    Args:
+        history: List of validation F1 scores
+        window: Window size for SMA calculation
+
+    Returns:
+        float: SMA value
+    """
+    if len(history) < window:
+        # Not enough data yet - return average of available data
+        return sum(history) / len(history) if history else 0.0
+    else:
+        # Use last 'window' values for SMA
+        return sum(history[-window:]) / window
 
 def run_train(model_type, **kwargs):
     # Config
@@ -54,10 +72,19 @@ def run_train(model_type, **kwargs):
     epochs = kwargs.get('epoch', 20) # 'epoch' in config, 'epochs' in logic
     batch_size = kwargs.get('batch_size', 32)
     learning_rate = kwargs.get('learning_rate', 1e-4) # 'learning_rate' in config
-    patience = kwargs.get('patience', 5)
     loss_type = kwargs.get('loss_type', 'WeightedCrossEntropy')
     use_amp = kwargs.get('use_amp', True)
     gradient_checkpointing = kwargs.get('gradient_checkpointing', False) # Disabled by default due to OOM
+
+    # Hybrid Early Stopping Configuration
+    # Support both 'patience' (legacy) and 'window' (new) for backward compatibility
+    window_size = kwargs.get('window', kwargs.get('patience', 5))
+    if 'patience' in kwargs and 'window' not in kwargs:
+        print("Warning: 'patience' parameter is deprecated. Use 'window' instead.")
+
+    # Validate window size
+    if window_size < 1:
+        raise ValueError(f"Invalid window size: {window_size}. Must be >= 1")
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -201,10 +228,11 @@ def run_train(model_type, **kwargs):
     # Optimizer
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     scaler = GradScaler(enabled=use_amp)
-    
-    # Training Loop
-    best_val_loss = float('inf')
-    patience_counter = 0
+
+    # Hybrid Early Stopping Tracking
+    min_val_loss = float('inf')  # Track minimum validation loss
+    best_smoothed_f1 = 0.0  # Track best smoothed macro-F1
+    val_f1_history = []  # Rolling window of macro-F1 scores
     
     for epoch in range(epochs):
         model.train()
@@ -306,7 +334,17 @@ def run_train(model_type, **kwargs):
         
         # Group Metrics
         group_metrics = calculate_group_metrics(val_targets, val_preds, head, mid, tail)
-        
+
+        # --- Hybrid Early Stopping Logic ---
+
+        # Update F1 history and calculate smoothed F1
+        val_f1_history.append(val_f1)
+        current_smoothed_f1 = calculate_sma(val_f1_history, window_size)
+
+        # Update minimum loss tracker
+        if avg_val_loss < min_val_loss:
+            min_val_loss = avg_val_loss
+
         # Log
         metrics = {
             "epoch": epoch + 1,
@@ -317,23 +355,38 @@ def run_train(model_type, **kwargs):
             "val/acc": val_acc,
             "val/f1": val_f1,
             "val/uar": val_uar,
+            "val/smoothed_f1": current_smoothed_f1,
+            "val/best_smoothed_f1": best_smoothed_f1,
+            "val/min_loss": min_val_loss,
+            "val/loss_threshold": min_val_loss * 1.05,
             **{f"val/{k}": v for k, v in group_metrics.items()}
         }
         wandb.log(metrics)
-        print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, Val Acc={val_acc:.4f}")
+        print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, "
+              f"Val F1={val_f1:.4f}, Smoothed F1={current_smoothed_f1:.4f}")
         
-        # Early Stopping
-        if avg_val_loss < best_val_loss:
-            best_val_loss = avg_val_loss
-            patience_counter = 0
-            # Save Best Model
+        # Condition 1: Loss Threshold Stop (5% degradation from minimum)
+        loss_threshold = min_val_loss * 1.05
+        if avg_val_loss > loss_threshold:
+            print(f"\nEarly stopping triggered: Loss threshold exceeded")
+            print(f"Current loss: {avg_val_loss:.4f} > Threshold: {loss_threshold:.4f} (min_loss * 1.05)")
+            print(f"Best smoothed F1 achieved: {best_smoothed_f1:.4f}")
+            break
+
+        # Condition 2: Smoothed Macro-F1 Stop (no improvement - strict)
+        if current_smoothed_f1 > best_smoothed_f1:
+            best_smoothed_f1 = current_smoothed_f1
+
+            # Save Best Model based on smoothed F1
             save_path = kwargs.get('save_path', 'ckpt/best_model')
             model.save_pretrained(save_path)
+            print(f"New best smoothed F1: {current_smoothed_f1:.4f} - Model saved")
         else:
-            patience_counter += 1
-            if patience_counter >= patience:
-                print(f"Early stopping at epoch {epoch+1}")
-                break
+            # Strict stopping: stop immediately if no improvement
+            print(f"\nEarly stopping triggered: No improvement in smoothed macro-F1")
+            print(f"Current smoothed F1: {current_smoothed_f1:.4f}")
+            print(f"Best smoothed F1: {best_smoothed_f1:.4f}")
+            break
                 
     wandb.finish()
     
