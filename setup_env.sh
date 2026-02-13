@@ -41,6 +41,11 @@ fi
 echo "Syncing packages..."
 pip-sync requirements.txt
 
+# 6. setup environment variables
+echo "Setting up environment variables file..."
+mv .env.example .env
+
 echo -e "\n--- Setup Complete! ---"
 echo "To start working, run this command in your terminal:"
 echo "source exp/bin/activate"
+echo "Also remember to set up your .env file with the necessary environment variables."

@@ -80,7 +80,7 @@ def run_train(model_type, **kwargs):
     # Config
     project = kwargs.get('project', 'SER_Experiment')
     seed = kwargs.get('seed', 42)
-    epochs = kwargs.get('epoch', 20) # 'epoch' in config, 'epochs' in logic
+    max_epochs = kwargs.get('epoch', 20) # 'epoch' in config, 'epochs' in logic
     batch_size = kwargs.get('batch_size', 32)
     learning_rate = kwargs.get('learning_rate', 1e-4) # 'learning_rate' in config
     loss_type = kwargs.get('loss_type', 'WeightedCrossEntropy')
@@ -245,14 +245,14 @@ def run_train(model_type, **kwargs):
     best_smoothed_f1 = 0.0  # Track best smoothed macro-F1
     val_f1_history = []  # Rolling window of macro-F1 scores
     
-    for epoch in range(epochs):
+    for epoch in range(max_epochs):
         model.train()
         train_loss = 0
         all_preds = []
         all_targets = []
         
         # Progress bar for training
-        train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
+        train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{max_epochs} [Train]")
         iter_start_time = time.time()
         for i, batch in enumerate(train_pbar):
             # batch: (wav, dur), label, uttid
@@ -321,7 +321,7 @@ def run_train(model_type, **kwargs):
         
         with torch.no_grad():
             # Progress bar for validation
-            val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{epochs} [Val]", leave=False)
+            val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{max_epochs} [Val]", leave=False)
             for batch in val_pbar:
                 x, y, mask, _ = batch
                 x = x.to(device)
