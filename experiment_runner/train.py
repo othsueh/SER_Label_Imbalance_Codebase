@@ -16,9 +16,7 @@ import utils
 
 def get_class_distribution(labels):
     counts = Counter(labels)
-    total = sum(counts.values())
-    dist = {k: v/total for k, v in counts.items()}
-    return counts, dist
+    return counts
 
 def identify_head_mid_tail(corpus):
     if corpus == 'MSP-PODCAST':
@@ -157,7 +155,7 @@ def run_train(model_type, **kwargs):
     # train_cat_ser.py: y = y.max(dim=1)[1] -> so it is One-Hot or prob distribution.
     # We need integer labels for counting.
     train_labels_int = np.argmax(train_dataset.labels, axis=1)
-    class_counts, class_dist = get_class_distribution(train_labels_int)
+    class_counts = get_class_distribution(train_labels_int)
     head, mid, tail = identify_head_mid_tail(corpus)
     
     print(f"Memory before model load: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
