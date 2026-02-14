@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
+import math
 
 class WeightedResampledCrossEntropyLoss(nn.Module):
     """
@@ -56,6 +58,58 @@ class SoftmaxLoss(nn.Module):
     def forward(self, logits, labels):
         return self.criterion(logits, labels)
 
+class SigmoidDRLoss(nn.Module):
+    """
+    Distribution-based Ranking Loss using sigmoid activation.
+    Minimizes the distance of negative class probabilities while maximizing
+    the distance of positive class probabilities.
+    """
+    def __init__(self, pos_lambda=1, neg_lambda=0.1/math.log(3.5), L=6., tau=4.):
+        super(SigmoidDRLoss, self).__init__()
+        self.margin = 0.5
+        self.pos_lambda = pos_lambda
+        self.neg_lambda = neg_lambda
+        self.L = L
+        self.tau = tau
+
+    def forward(self, logits, targets):
+        num_classes = logits.shape[1]
+        dtype = targets.dtype
+        device = targets.device
+        class_range = torch.arange(1, num_classes + 1, dtype=dtype, device=device).unsqueeze(0)
+        t = targets.unsqueeze(1)
+        pos_ind = (t == class_range)
+        neg_ind = (t != class_range) * (t >= 0)
+        pos_prob = logits[pos_ind].sigmoid()
+        neg_prob = logits[neg_ind].sigmoid()
+        neg_q = F.softmax(neg_prob/self.neg_lambda, dim=0)
+        neg_dist = torch.sum(neg_q * neg_prob)
+        if pos_prob.numel() > 0:
+            pos_q = F.softmax(-pos_prob/self.pos_lambda, dim=0)
+            pos_dist = torch.sum(pos_q * pos_prob)
+            loss = self.tau*torch.log(1.+torch.exp(self.L*(neg_dist - pos_dist+self.margin)))/self.L
+        else:
+            loss = self.tau*torch.log(1.+torch.exp(self.L*(neg_dist - 1. + self.margin)))/self.L
+        return loss
+
+class DRLoss(nn.Module):
+    """
+    Wrapper for SigmoidDRLoss to match the API of other loss modules.
+    Supports customizable hyperparameters for distribution-based ranking.
+    """
+    def __init__(self, device='cuda', pos_lambda=1, neg_lambda=0.1/math.log(3.5), L=6., tau=4.):
+        super().__init__()
+        # class_counts is unused but kept for API consistency
+        self.loss_fn = SigmoidDRLoss(
+            pos_lambda=pos_lambda,
+            neg_lambda=neg_lambda,
+            L=L,
+            tau=tau
+        )
+
+    def forward(self, logits, labels):
+        return self.loss_fn(logits, labels)
+
 class FocalLoss(nn.Module):
     """
     Focal Loss for multi-class classification
@@ -83,6 +137,8 @@ def get_loss_module(loss_type, class_counts, device='cuda'):
         return SoftmaxLoss(class_counts, device)
     elif loss_type == "Focal":
         return FocalLoss(device)
+    elif loss_type == "DR":
+        return DRLoss(device)
     else:
         # Default to simple CE if unknown
         return nn.CrossEntropyLoss()

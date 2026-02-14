@@ -24,7 +24,7 @@ hidden_dim = 768
 name = "UpstreamFinetune-Reweight"
 model_type = "UpstreamFinetune"
 config = "base_config"
-config_update = { loss_type = "Focal" }
+config_update = { loss_type = "DR" }
 #BalancedSoftmax Softmax Focal
 
 #[[experiments]]
