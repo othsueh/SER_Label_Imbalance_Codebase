@@ -61,34 +61,18 @@ class FocalLoss(nn.Module):
     Focal Loss for multi-class classification
     FL(p_t) = -alpha_t * (1 - p_t)^gamma * log(p_t)
     """
-    def __init__(self, class_counts, device='cuda', alpha=None, gamma=2.0):
+    def __init__(self, device='cuda', alpha=1.0, gamma=2.0):
         super().__init__()
         self.gamma = gamma
         self.device = device
-        
-        # Handle alpha
-        # If alpha is None, try to balance based on class counts similar to WeightedResampledCE
-        if alpha is None:
-            total_samples = sum(class_counts.values())
-            num_classes = len(class_counts)
-            weights = []
-            sorted_keys = sorted(class_counts.keys())
-            for cls in sorted_keys:
-                 freq = class_counts[cls]
-                 w = total_samples / (num_classes * freq) if freq > 0 else 0
-                 weights.append(w)
-            self.alpha = torch.tensor(weights, device=device, dtype=torch.float)
-        elif isinstance(alpha, (list, np.ndarray)):
-            self.alpha = torch.tensor(alpha, device=device, dtype=torch.float)
-        else:
-            self.alpha = alpha # Can be a single float or None if no alpha weighing is desired
+        self.alpha = alpha
 
     def forward(self, logits, labels):
         # logits: [B, C], labels: [B]
-        ce_loss = nn.CrossEntropyLoss(reduction='none', weight=self.alpha)(logits, labels)
+        ce_loss = nn.CrossEntropyLoss(reduction='none')(logits, labels)
         pt = torch.exp(-ce_loss)
-        focal_loss = ((1 - pt) ** self.gamma) * ce_loss
-        return focal_loss.mean()
+        focal_loss = (self.alpha * (1 - pt) ** self.gamma * ce_loss).mean()
+        return focal_loss
 
 def get_loss_module(loss_type, class_counts, device='cuda'):
     if loss_type == "WeightedCrossEntropy":
@@ -98,7 +82,7 @@ def get_loss_module(loss_type, class_counts, device='cuda'):
     elif loss_type == "Softmax":
         return SoftmaxLoss(class_counts, device)
     elif loss_type == "Focal":
-        return FocalLoss(class_counts, device)
+        return FocalLoss(device)
     else:
         # Default to simple CE if unknown
         return nn.CrossEntropyLoss()
