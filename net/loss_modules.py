@@ -97,7 +97,7 @@ class DRLoss(nn.Module):
     Wrapper for SigmoidDRLoss to match the API of other loss modules.
     Supports customizable hyperparameters for distribution-based ranking.
     """
-    def __init__(self, device='cuda', pos_lambda=1, neg_lambda=0.1/math.log(3.5), L=6., tau=4.):
+    def __init__(self, device='cuda', pos_lambda=1, neg_lambda=1.0, L=6., tau=4.):
         super().__init__()
         # class_counts is unused but kept for API consistency
         self.loss_fn = SigmoidDRLoss(
@@ -112,20 +112,65 @@ class DRLoss(nn.Module):
 
 class FocalLoss(nn.Module):
     """
-    Focal Loss for multi-class classification
-    FL(p_t) = -alpha_t * (1 - p_t)^gamma * log(p_t)
+    Focal Loss with automatic Inverse Class Frequency weighting.
     """
-    def __init__(self, device='cuda', alpha=1.0, gamma=2.0):
+    def __init__(self, class_counts, device='cuda', alpha=None, gamma=2.0):
         super().__init__()
         self.gamma = gamma
         self.device = device
-        self.alpha = alpha
+
+        # --- ALPHA HANDLING LOGIC ---
+        # 1. If alpha is explicitly passed as a list/tensor, use it directly.
+        if isinstance(alpha, (list, tuple, torch.Tensor)):
+             self.alpha = torch.tensor(alpha, device=device, dtype=torch.float)
+        
+        # 2. If alpha is None (default), calculate it from class_counts
+        #    Logic taken from WeightedResampledCrossEntropyLoss
+        elif class_counts is not None:
+            total_samples = sum(class_counts.values())
+            num_classes = len(class_counts)
+            weights = []
+            
+            # Ensure keys are sorted to match class indices 0, 1, 2...
+            sorted_keys = sorted(class_counts.keys()) 
+            
+            for cls in sorted_keys:
+                 freq = class_counts[cls]
+                 # Inverse Frequency Weighting
+                 w = total_samples / (num_classes * freq) if freq > 0 else 0.0
+                 weights.append(w)
+            
+            # Register as a buffer so it moves to device automatically with the model
+            self.register_buffer('alpha', torch.tensor(weights, device=device, dtype=torch.float))
+            print(f"FocalLoss: Auto-calculated alpha weights: {self.alpha.cpu().numpy()}")
+
+        # 3. Fallback: Use scalar alpha (e.g. 1.0)
+        else:
+             val = alpha if alpha is not None else 1.0
+             self.register_buffer('alpha', torch.tensor(val, device=device, dtype=torch.float))
 
     def forward(self, logits, labels):
         # logits: [B, C], labels: [B]
+        
+        # 1. Calculate Standard CE (no reduction) to get -log(pt)
         ce_loss = nn.CrossEntropyLoss(reduction='none')(logits, labels)
+        
+        # 2. Get the probability pt
         pt = torch.exp(-ce_loss)
-        focal_loss = (self.alpha * (1 - pt) ** self.gamma * ce_loss).mean()
+        
+        # 3. Select the correct alpha for each sample in the batch
+        if self.alpha.ndim > 0:
+            # If alpha is a list of weights [C], pick the weight corresponding to the label
+            alpha_t = self.alpha[labels]
+        else:
+            # If alpha is a scalar
+            alpha_t = self.alpha
+
+        # 4. Focal Loss Formula
+        # FL = -alpha_t * (1-pt)^gamma * log(pt)
+        # Note: ce_loss is already equal to -log(pt)
+        focal_loss = (alpha_t * (1 - pt) ** self.gamma * ce_loss).mean()
+        
         return focal_loss
 
 def get_loss_module(loss_type, class_counts, device='cuda'):
@@ -136,7 +181,7 @@ def get_loss_module(loss_type, class_counts, device='cuda'):
     elif loss_type == "Softmax":
         return SoftmaxLoss(class_counts, device)
     elif loss_type == "Focal":
-        return FocalLoss(device)
+        return FocalLoss(class_counts,device)
     elif loss_type == "DR":
         return DRLoss(device)
     else:
