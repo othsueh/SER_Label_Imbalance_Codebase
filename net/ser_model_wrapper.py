@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import os
 from transformers import AutoModel
 from net.pooling import AttentiveStatisticsPooling
 from net.ser import EmotionRegression
@@ -7,14 +8,17 @@ from net.ser import EmotionRegression
 class SERModel(nn.Module):
     def __init__(self, ssl_type, pooling_type, head_dim, hidden_dim, classifier_output_dim, dropout=0.2, finetune_layers=3):
         super(SERModel, self).__init__()
-        
+
         # 1. SSL Model
         _is_emotion2vec = "emotion2vec" in ssl_type.lower()
 
         if _is_emotion2vec:
             from net.emotion2vec_wrapper import Emotion2VecWrapper
-            # Accept "emotion2vec_plus_base" or full "iic/emotion2vec_plus_base"
-            funasr_model_id = ssl_type if "/" in ssl_type else f"iic/{ssl_type}"
+            # ssl_type can be:
+            # - Model name: "emotion2vec_plus_base" (downloads from ModelScope)
+            # - Local path: "/path/to/emotion2vec_plus_base" (loads from disk)
+            # - Full ID: "iic/emotion2vec_plus_base" (downloads from ModelScope)
+            funasr_model_id = ssl_type if "/" in ssl_type or os.path.isdir(ssl_type) else f"iic/{ssl_type}"
             self.ssl_model = Emotion2VecWrapper(model_id=funasr_model_id)
         else:
             try:

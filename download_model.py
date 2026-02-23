@@ -10,14 +10,25 @@ models = [
 
 
 def download_emotion2vec():
-    """Pre-download emotion2vec_plus_base via FunASR to ~/.cache/modelscope."""
+    """Pre-download emotion2vec_plus_base via FunASR to PATH_TO_PRETRAINED_MODELS."""
     try:
         from funasr import AutoModel as FunASRAutoModel
-        print("Pre-downloading emotion2vec_plus_base via FunASR...")
+        import os
+
+        output_dir = config["PATH_TO_PRETRAINED_MODELS"]
+        emotion2vec_dir = os.path.join(output_dir, "emotion2vec_plus_base")
+        os.makedirs(emotion2vec_dir, exist_ok=True)
+
+        print(f"Pre-downloading emotion2vec_plus_base via FunASR to {emotion2vec_dir}...")
+        # Set environment variable to control cache directory
+        os.environ["MODELSCOPE_CACHE"] = emotion2vec_dir
+
         FunASRAutoModel(model="iic/emotion2vec_plus_base", device="cpu")
-        print("Done. Cached to ~/.cache/modelscope.")
+        print(f"Done. Cached to {emotion2vec_dir}.")
     except ImportError:
         print("funasr not installed. Run: pip install funasr")
+    except Exception as e:
+        print(f"Error downloading emotion2vec: {e}")
 
 
 if __name__ == "__main__":

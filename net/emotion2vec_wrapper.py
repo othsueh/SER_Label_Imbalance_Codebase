@@ -2,7 +2,6 @@
 
 import torch
 import torch.nn as nn
-from types import SimpleNamespace
 
 
 class _FakeConfig:
@@ -38,6 +37,10 @@ class Emotion2VecWrapper(nn.Module):
             raise ImportError("funasr is required for emotion2vec. Install: pip install funasr")
 
         print(f"[Emotion2VecWrapper] Loading '{model_id}' via FunASR...")
+
+        # model_id can be either:
+        # - HuggingFace model ID: "iic/emotion2vec_plus_base" (downloads from ModelScope)
+        # - Local path: "/path/to/emotion2vec_plus_base" (loads from disk)
         funasr_automodel = FunASRAutoModel(model=model_id, device="cpu")
         self._e2v = funasr_automodel.model  # underlying Emotion2vec nn.Module
 
