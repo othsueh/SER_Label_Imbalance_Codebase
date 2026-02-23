@@ -9,13 +9,21 @@ class SERModel(nn.Module):
         super(SERModel, self).__init__()
         
         # 1. SSL Model
-        try:
-            self.ssl_model = AutoModel.from_pretrained(ssl_type)
-        except OSError:
-            # If local path fails or not found, try generic load or raise
-            print(f"Warning: Could not load from {ssl_type}, trying default or checking path...")
-            raise
-            
+        _is_emotion2vec = "emotion2vec" in ssl_type.lower()
+
+        if _is_emotion2vec:
+            from net.emotion2vec_wrapper import Emotion2VecWrapper
+            # Accept "emotion2vec_plus_base" or full "iic/emotion2vec_plus_base"
+            funasr_model_id = ssl_type if "/" in ssl_type else f"iic/{ssl_type}"
+            self.ssl_model = Emotion2VecWrapper(model_id=funasr_model_id)
+        else:
+            try:
+                self.ssl_model = AutoModel.from_pretrained(ssl_type)
+            except OSError:
+                # If local path fails or not found, try generic load or raise
+                print(f"Warning: Could not load from {ssl_type}, trying default or checking path...")
+                raise
+
         self.ssl_model.freeze_feature_encoder()
         
         # Partial Fine-tuning

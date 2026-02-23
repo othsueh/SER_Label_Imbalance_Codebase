@@ -4,6 +4,7 @@ FeatureExtraction
 net/__pycache__
 dataset_module/__pycache__
 archive
+.claude
 #ckpt
 wandb
 exp

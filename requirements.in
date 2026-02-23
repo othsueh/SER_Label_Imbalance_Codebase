@@ -3,6 +3,7 @@ torchvision
 torchaudio
 dotenv
 datasets
+funasr
 huggingface_hub
 seaborn
 soundfile
