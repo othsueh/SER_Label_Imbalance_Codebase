@@ -63,8 +63,11 @@ class Emotion2VecWrapper(nn.Module):
 
     def freeze_feature_encoder(self):
         """Freeze CNN convolutional layers (analogous to WavLM's freeze_feature_encoder)."""
-        audio_enc = (self._e2v.modality_encoders.get("AUDIO")
-                     if hasattr(self._e2v, "modality_encoders") else None)
+        audio_enc = None
+        if hasattr(self._e2v, "modality_encoders"):
+            # modality_encoders is a ModuleDict, use bracket notation
+            if "AUDIO" in self._e2v.modality_encoders:
+                audio_enc = self._e2v.modality_encoders["AUDIO"]
 
         if audio_enc is not None and hasattr(audio_enc, "local_encoder"):
             target = audio_enc.local_encoder
