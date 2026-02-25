@@ -1,5 +1,6 @@
 import os
 import torch
+import torch.nn.functional as F
 import torch.optim as optim
 import wandb
 import numpy as np
@@ -85,6 +86,12 @@ def run_train(model_type, **kwargs):
     use_amp = kwargs.get('use_amp', True)
     gradient_checkpointing = kwargs.get('gradient_checkpointing', False) # Disabled by default due to OOM
 
+    # Label Adaptive Mixup configuration
+    use_mixup = kwargs.get('use_mixup', False)
+    mixup_p   = kwargs.get('mixup_p', 0.5)
+    if use_mixup:
+        from utils.mixup import label_adaptive_mixup
+
     # Hybrid Early Stopping Configuration
     # Support both 'patience' (legacy) and 'window' (new) for backward compatibility
     window_size = kwargs.get('window', kwargs.get('patience', 5))
@@ -127,6 +134,15 @@ def run_train(model_type, **kwargs):
     # Get Norm Stats for Dev
     wav_mean, wav_std = train_dataset.get_norm_stats()
     val_dataset = SERDataset(wav_dir, label_path, split="dev", wav_mean=wav_mean, wav_std=wav_std)
+
+    # Validate soft labels for mixup compatibility
+    if use_mixup:
+        sample_batch = train_dataset[0]
+        _, sample_label, _, _ = sample_batch
+        label_sum = sample_label.sum()
+        print(f"[Mixup Validation] Sample label sum: {label_sum:.6f} (expected ~1.0)")
+        if not (0.99 < label_sum < 1.01):
+            print(f"[WARNING] Dataset labels may not be proper probability distributions. Mixup may produce invalid soft labels.")
 
     print("Preparing the data loader")
     train_loader = DataLoader(
@@ -262,13 +278,19 @@ def run_train(model_type, **kwargs):
             x = x.to(device)
             y = y.to(device)
             mask = mask.to(device)
-            
+
             # Debug: check graph
             # if epoch == 0 and i == 0:
             #    print(f"x requires_grad: {x.requires_grad}")
 
-            
-            # y in dataset is probabilities/one-hot. Criterion expects class indices for CE usually, 
+            # Apply Label Adaptive Mixup if enabled
+            if use_mixup:
+                x, y, mask = label_adaptive_mixup(x, y, mask, p_mix=mixup_p)
+                if epoch == 0 and i == 0:
+                    print(f"[LAM] Mixup enabled: p_mix={mixup_p}")
+                    print(f"[LAM] Sample y_mixed sums (should all be ~1.0): {y[:4].sum(dim=1)}")
+
+            # y in dataset is probabilities/one-hot. Criterion expects class indices for CE usually,
             # unless using SoftLabel CE. PyTorch CE expects indices.
             # Convert y to indices
             y_indices = torch.argmax(y, dim=1)
@@ -280,7 +302,16 @@ def run_train(model_type, **kwargs):
 
             with autocast(enabled=use_amp, device_type='cuda'):
                 logits = model(x, attention_mask=mask)
-                loss = criterion(logits, y_indices) # WeightedResampledCrossEntropyLoss wraps CE, expects indices
+                if use_mixup:
+                    # Use KL divergence for soft label mixing
+                    loss = F.kl_div(
+                        F.log_softmax(logits, dim=1),
+                        y,  # soft label distribution from mixup
+                        reduction='batchmean'
+                    )
+                else:
+                    # Use standard criterion with hard labels
+                    loss = criterion(logits, y_indices) # WeightedResampledCrossEntropyLoss wraps CE, expects indices
             
             if i == 0 and epoch == 0:
                 print(f"Mem after forward: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
@@ -343,6 +374,11 @@ def run_train(model_type, **kwargs):
         
         # Group Metrics
         group_metrics = calculate_group_metrics(val_targets, val_preds, head, mid, tail)
+
+        # Mixup verification logging
+        if use_mixup:
+            mixup_log = {"mixup/enabled": True, "mixup/p_mix": mixup_p}
+            metrics.update(mixup_log)
 
         # --- Hybrid Early Stopping Logic ---
 

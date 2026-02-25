@@ -27,6 +27,13 @@ config = "base_config"
 config_update = { loss_type = "DR" }
 #BalancedSoftmax Softmax Focal
 
+# Label Adaptive Mixup experiment
+[[experiments]]
+name = "UpstreamFinetune-LAM"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { use_mixup = true, mixup_p = 0.5 }
+
 [base_config_e2v]
 project = "NSTC"
 corpus = "MSP-PODCAST"
