@@ -138,7 +138,7 @@ def run_train(model_type, **kwargs):
     # Validate soft labels for mixup compatibility
     if use_mixup:
         sample_batch = train_dataset[0]
-        _, sample_label, _, _ = sample_batch
+        _, sample_label, _ = sample_batch
         label_sum = sample_label.sum()
         print(f"[Mixup Validation] Sample label sum: {label_sum:.6f} (expected ~1.0)")
         if not (0.99 < label_sum < 1.01):
