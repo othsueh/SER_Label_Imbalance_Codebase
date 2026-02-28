@@ -20,11 +20,11 @@ head_dim = 768
 hidden_dim = 768
 
 # Remote
-[[experiments]]
-name = "UpstreamFinetune-Reweight"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "DR" }
+# [[experiments]]
+# name = "UpstreamFinetune-Reweight"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "DR" }
 #BalancedSoftmax Softmax Focal
 
 # Label Adaptive Mixup experiment
@@ -34,32 +34,33 @@ model_type = "UpstreamFinetune"
 config = "base_config"
 config_update = { use_mixup = true, mixup_p = 0.5 }
 
-[base_config_e2v]
-project = "NSTC"
-corpus = "MSP-PODCAST"
-origin_upstream_url = "emotion2vec/emotion2vec_plus_base"
-upstream_model = "emotion2vec_plus_base"
-epoch = 30
-batch_size = 16
-learning_rate = 1e-5
-dropout = 0.5
-window = 5
-seed = 42
-tags = ["emotion2vec", "Re-weighting"]
-finetune_layers = 3
-num_layers = 3
-use_gender = false
-ckpt_name = "None"
-loss_type = "WeightedCrossEntropy"
-pooling_type = "AttentiveStatisticsPooling"
-head_dim = 768
-hidden_dim = 768
+# Emotion2Vec-DR Softmax experiment
+# [base_config_e2v]
+# project = "NSTC"
+# corpus = "MSP-PODCAST"
+# origin_upstream_url = "emotion2vec/emotion2vec_plus_base"
+# upstream_model = "emotion2vec_plus_base"
+# epoch = 30
+# batch_size = 16
+# learning_rate = 1e-5
+# dropout = 0.5
+# window = 5
+# seed = 42
+# tags = ["emotion2vec", "Re-weighting"]
+# finetune_layers = 3
+# num_layers = 3
+# use_gender = false
+# ckpt_name = "None"
+# loss_type = "WeightedCrossEntropy"
+# pooling_type = "AttentiveStatisticsPooling"
+# head_dim = 768
+# hidden_dim = 768
 
-[[experiments]]
-name = "Emotion2Vec-DR"
-model_type = "UpstreamFinetune"
-config = "base_config_e2v"
-config_update = { loss_type = "DR" }
+# [[experiments]]
+# name = "Emotion2Vec-DR"
+# model_type = "UpstreamFinetune"
+# config = "base_config_e2v"
+# config_update = { loss_type = "Softmax" }
 
 #[[experiments]]
 #name = "Retraining with Leaky ReLU"
