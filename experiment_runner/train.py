@@ -375,11 +375,6 @@ def run_train(model_type, **kwargs):
         # Group Metrics
         group_metrics = calculate_group_metrics(val_targets, val_preds, head, mid, tail)
 
-        # Mixup verification logging
-        if use_mixup:
-            mixup_log = {"mixup/enabled": True, "mixup/p_mix": mixup_p}
-            metrics.update(mixup_log)
-
         # --- Hybrid Early Stopping Logic ---
 
         # Update F1 history and calculate smoothed F1
@@ -404,7 +399,8 @@ def run_train(model_type, **kwargs):
             "val/best_smoothed_f1": best_smoothed_f1,
             "val/min_loss": min_val_loss,
             "val/loss_threshold": min_val_loss * 1.05,
-            **{f"val/{k}": v for k, v in group_metrics.items()}
+            **{f"val/{k}": v for k, v in group_metrics.items()},
+            **({"mixup/enabled": True, "mixup/p_mix": mixup_p} if use_mixup else {})
         }
         wandb.log(metrics)
         print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, "
