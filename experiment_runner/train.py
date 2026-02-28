@@ -442,5 +442,6 @@ def run_train(model_type, **kwargs):
         corpus_name=kwargs.get('corpus', 'MSP-PODCAST'),
         upstream_model=kwargs.get('upstream_model', 'wavlm-base-plus'),
         loss_type=kwargs.get('loss_type', 'WeightedCrossEntropy'),
-        save_path=kwargs.get('save_path', 'ckpt/best_model')
+        save_path=kwargs.get('save_path', 'ckpt/best_model'),
+        exp_name=kwargs.get('name', None)
     )

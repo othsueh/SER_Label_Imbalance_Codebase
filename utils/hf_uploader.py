@@ -1,25 +1,28 @@
 import os
 from huggingface_hub import HfApi, create_repo
 
-def upload_model_to_hf(corpus_name, upstream_model, loss_type, save_path):
+def upload_model_to_hf(corpus_name, upstream_model, loss_type, save_path, exp_name=None):
     """
     Uploads the trained model to Hugging Face Hub.
-    
+
     Args:
         corpus_name (str): Name of the corpus (e.g., 'MSP-PODCAST')
         upstream_model (str): Name of the upstream model (e.g., 'wavlm-base-plus')
         loss_type (str): Type of loss used (e.g., 'WeightedCrossEntropy')
         save_path (str): Path to the saved model directory
+        exp_name (str): Experiment name for disambiguation (e.g., 'UpstreamFinetune-LAM')
     """
     try:
         print("\n" + "="*40)
         print("Initiating Hugging Face Hub Upload...")
-        
-        # Construct model name: corpus + model + loss_type
+
+        # Construct model name: corpus + model + loss_type [+ exp_name]
         # Clean naming: replace / with _ in model name
         upstream = upstream_model.replace('/', '_')
-        
+
         repo_name = f"{corpus_name}_{upstream}_{loss_type}"
+        if exp_name:
+            repo_name = f"{repo_name}_{exp_name}"
         
         api = HfApi()
         user_info = api.whoami()
