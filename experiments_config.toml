@@ -28,11 +28,11 @@ hidden_dim = 768
 #BalancedSoftmax Softmax Focal
 
 # Label Adaptive Mixup experiment
-[[experiments]]
-name = "UpstreamFinetune-LAM"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { use_mixup = true, mixup_p = 0.5 }
+# [[experiments]]
+# name = "UpstreamFinetune-LAM"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { use_mixup = true, mixup_p = 0.5 }
 
 # --- Soft-label experiments (Shamsi et al. Odyssey 2024 / Chou et al. 2024) ---
 # P-type: soft labels from primary annotations only (fraction of annotators per emotion)
@@ -46,23 +46,23 @@ model_type = "UpstreamFinetune"
 config = "base_config"
 config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
 
-[[experiments]]
-name = "SoftLabel-WBCE-S"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
+# [[experiments]]
+# name = "SoftLabel-WBCE-S"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
 
-[[experiments]]
-name = "SoftLabel-KLD-P"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "KLD", label_key = "PATH_TO_LABEL_SOFT_P" }
+# [[experiments]]
+# name = "SoftLabel-KLD-P"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "KLD", label_key = "PATH_TO_LABEL_SOFT_P" }
 
-[[experiments]]
-name = "SoftLabel-KLD-S"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "KLD", label_key = "PATH_TO_LABEL_SOFT_S" }
+# [[experiments]]
+# name = "SoftLabel-KLD-S"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "KLD", label_key = "PATH_TO_LABEL_SOFT_S" }
 
 # Emotion2Vec-DR Softmax experiment
 # [base_config_e2v]
