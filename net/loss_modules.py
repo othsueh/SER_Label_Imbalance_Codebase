@@ -173,6 +173,64 @@ class FocalLoss(nn.Module):
         
         return focal_loss
 
+class WeightedBinaryCrossEntropyLoss(nn.Module):
+    """
+    Weighted Binary Cross-Entropy Loss (L_WBCE) for soft-label training.
+
+    Treats each emotion class as an independent binary classification problem.
+    Soft labels y_{i,c} are the fraction of annotators who perceived emotion c
+    (P-type: primary only; S-type: primary + secondary).
+
+    Class weights w_c = total_samples / (num_classes * freq_c) match the
+    weighting used in WeightedResampledCrossEntropyLoss.
+
+    Reference: Shamsi et al., Odyssey 2024 (Eq. 2)
+    """
+    def __init__(self, class_counts, device='cuda'):
+        super().__init__()
+        total_samples = sum(class_counts.values())
+        num_classes = len(class_counts)
+        weights = []
+        for cls in sorted(class_counts.keys()):
+            freq = class_counts[cls]
+            w = total_samples / (num_classes * freq) if freq > 0 else 0.0
+            weights.append(w)
+        self.register_buffer('class_weights', torch.tensor(weights, device=device, dtype=torch.float))
+
+    def forward(self, logits, labels):
+        # logits: (B, C)  labels: (B, C) soft probs in [0, 1]
+        bce = F.binary_cross_entropy_with_logits(logits, labels, reduction='none')  # (B, C)
+        weighted = bce * self.class_weights.unsqueeze(0)  # broadcast over batch
+        return weighted.mean()
+
+
+class KLDivergenceLoss(nn.Module):
+    """
+    KL Divergence Loss (L_KLD) for soft-label training.
+
+    KL(y_soft || softmax(logits)) — no class weights, per paper.
+    Soft labels are treated as a target probability distribution.
+
+    Reference: Shamsi et al., Odyssey 2024 (Eq. 3)
+    """
+    def __init__(self, device='cuda'):
+        super().__init__()
+
+    def forward(self, logits, labels):
+        # logits: (B, C)  labels: (B, C) soft probs
+        # Normalize each row to sum to 1 — required for a valid KL target distribution.
+        # P-type labels can sum to < 1 when some annotators chose unmapped "Other" classes;
+        # renormalizing here preserves relative annotator agreement across the 8 classes.
+        labels = labels / labels.sum(dim=1, keepdim=True).clamp(min=1e-8)
+        log_probs = F.log_softmax(logits, dim=1)
+        return F.kl_div(log_probs, labels, reduction='batchmean')
+
+
+# Loss types that consume soft-label distributions (B, C) instead of hard indices (B,).
+# Used by train.py to decide whether to skip the argmax conversion.
+SOFT_LABEL_LOSSES = {"WBCE", "KLD"}
+
+
 def get_loss_module(loss_type, class_counts, device='cuda'):
     if loss_type == "WeightedCrossEntropy":
         return WeightedResampledCrossEntropyLoss(class_counts, device)
@@ -181,9 +239,13 @@ def get_loss_module(loss_type, class_counts, device='cuda'):
     elif loss_type == "Softmax":
         return SoftmaxLoss(class_counts, device)
     elif loss_type == "Focal":
-        return FocalLoss(class_counts,device)
+        return FocalLoss(class_counts, device)
     elif loss_type == "DR":
         return DRLoss(device)
+    elif loss_type == "WBCE":
+        return WeightedBinaryCrossEntropyLoss(class_counts, device)
+    elif loss_type == "KLD":
+        return KLDivergenceLoss(device)
     else:
         # Default to simple CE if unknown
         return nn.CrossEntropyLoss()

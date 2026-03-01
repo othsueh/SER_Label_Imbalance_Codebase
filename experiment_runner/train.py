@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from torch.amp import autocast, GradScaler
 from dataset_module.ser_dataset import SERDataset
 from net.ser_model_wrapper import SERModel
-from net.loss_modules import get_loss_module
+from net.loss_modules import get_loss_module, SOFT_LABEL_LOSSES
 import utils
 
 def get_class_distribution(labels):
@@ -125,7 +125,8 @@ def run_train(model_type, **kwargs):
             # Let's map PATH_TO_AUDIO.
             wav_dir = corpus_config.get('PATH_TO_AUDIO')
         if label_path is None:
-            label_path = corpus_config.get('PATH_TO_LABEL')
+            label_key = kwargs.get('label_key', 'PATH_TO_LABEL')
+            label_path = corpus_config.get(label_key)
             
     if wav_dir is None or label_path is None:
         raise ValueError(f"Could not resolve dataset paths for corpus '{corpus}'. Ensure 'wav_dir'/'label_path' are passed or defined in config.toml under '[{corpus}]'.")
@@ -290,28 +291,29 @@ def run_train(model_type, **kwargs):
                     print(f"[LAM] Mixup enabled: p_mix={mixup_p}")
                     print(f"[LAM] Sample y_mixed sums (should all be ~1.0): {y[:4].sum(dim=1)}")
 
-            # y in dataset is probabilities/one-hot. Criterion expects class indices for CE usually,
-            # unless using SoftLabel CE. PyTorch CE expects indices.
-            # Convert y to indices
+            # y_indices needed for metrics (F1, UAR) regardless of loss type
             y_indices = torch.argmax(y, dim=1)
-            
+
             optimizer.zero_grad()
-            
+
             if i == 0 and epoch == 0:
                 print(f"Mem before forward: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
 
             with autocast(enabled=use_amp, device_type='cuda'):
                 logits = model(x, attention_mask=mask)
                 if use_mixup:
-                    # Use KL divergence for soft label mixing
+                    # LAM: KLD over mixed soft distribution (preserves existing behavior)
                     loss = F.kl_div(
                         F.log_softmax(logits, dim=1),
-                        y,  # soft label distribution from mixup
+                        y,
                         reduction='batchmean'
                     )
+                elif loss_type in SOFT_LABEL_LOSSES:
+                    # WBCE / KLD: criterion consumes (B, C) soft-label distribution directly
+                    loss = criterion(logits, y)
                 else:
-                    # Use standard criterion with hard labels
-                    loss = criterion(logits, y_indices) # WeightedResampledCrossEntropyLoss wraps CE, expects indices
+                    # Hard-label losses (CE variants): criterion expects class indices (B,)
+                    loss = criterion(logits, y_indices)
             
             if i == 0 and epoch == 0:
                 print(f"Mem after forward: {torch.cuda.memory_allocated(device)/1024**3:.2f} GB")
@@ -359,7 +361,10 @@ def run_train(model_type, **kwargs):
                 y_indices = torch.argmax(y, dim=1)
                 
                 logits = model(x, attention_mask=mask)
-                loss = criterion(logits, y_indices)
+                if loss_type in SOFT_LABEL_LOSSES:
+                    loss = criterion(logits, y)
+                else:
+                    loss = criterion(logits, y_indices)
                 val_loss += loss.item()
                 
                 preds = torch.argmax(logits, dim=1).cpu().numpy()

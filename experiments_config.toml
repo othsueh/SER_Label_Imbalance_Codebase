@@ -34,6 +34,36 @@ model_type = "UpstreamFinetune"
 config = "base_config"
 config_update = { use_mixup = true, mixup_p = 0.5 }
 
+# --- Soft-label experiments (Shamsi et al. Odyssey 2024 / Chou et al. 2024) ---
+# P-type: soft labels from primary annotations only (fraction of annotators per emotion)
+# S-type: soft labels from primary + secondary annotations (all perceived emotions)
+# WBCE: Weighted Binary Cross-Entropy (class-weighted, per-class sigmoid)
+# KLD:  KL Divergence (no class weights, treats distribution as target)
+
+[[experiments]]
+name = "SoftLabel-WBCE-P"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
+
+[[experiments]]
+name = "SoftLabel-WBCE-S"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
+
+[[experiments]]
+name = "SoftLabel-KLD-P"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "KLD", label_key = "PATH_TO_LABEL_SOFT_P" }
+
+[[experiments]]
+name = "SoftLabel-KLD-S"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "KLD", label_key = "PATH_TO_LABEL_SOFT_S" }
+
 # Emotion2Vec-DR Softmax experiment
 # [base_config_e2v]
 # project = "NSTC"
