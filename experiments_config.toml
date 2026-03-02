@@ -1,6 +1,6 @@
 [base_config]
 project = "NSTC"
-corpus = "MSP-PODCAST"
+corpus = "BIIC-PODCAST"
 origin_upstream_url = "microsoft/wavlm-base-plus"
 upstream_model = "wavlm-base-plus"
 epoch = 30

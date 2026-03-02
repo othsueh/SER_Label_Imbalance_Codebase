@@ -27,11 +27,10 @@ def identify_head_mid_tail(corpus):
         tail = [3, 4, 5, 6]  # Surprise, Fear, Disgust, Contempt
         return head, mid, tail
     elif corpus == 'BIIC-PODCAST':
-        # not yet defined
-        # head = [0] # Neutral
-        # mid = [1, 2]   # Happy, Sad
-        # tail = [3, 4, 5, 6, 7]  # Angry, Surprise, Fear, Disgust, Contempt
-        return [], [], []  # Placeholder until defined
+        head = [2, 7] # Happy, Neutral
+        mid = [0, 1]   # Angry, Sad
+        tail = [3, 4, 5, 6]  # Surprise, Fear, Disgust, Contempt
+        return head, mid, tail
     else: 
         raise ValueError(f"Corpus '{corpus}' not recognized for head/mid/tail splits. Please define them in identify_head_mid_tail function.")
 

@@ -10,3 +10,8 @@ PATH_TO_LABEL_SOFT_S = '/workspace/MSP-PODCAST/Labels/processed_labels_soft_S.cs
 PATH_TO_AUDIO = '/workspace/MSP-PODCAST/Audios'
 PATH_TO_TRANSCRIPT = '/datas/store162/othsueh/MSP-Podcast/Transcripts'
 PATH_TO_DATASET = '/datas/store162/othsueh/wds_6_test/MSP-Podcast'
+
+[BIIC-PODCAST]
+PATH_TO_LABEL = '/workspace/BIIC-PODCAST/Labels/processed_labels.csv'
+PATH_TO_LABEL_SOFT_S = '/workspace/BIIC-PODCAST/Labels/processed_labels_soft_S.csv'
+PATH_TO_AUDIO = '/workspace/BIIC-PODCAST/Audios'
