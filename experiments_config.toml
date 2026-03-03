@@ -1,6 +1,7 @@
 [base_config]
 project = "NSTC"
 corpus = "BIIC-PODCAST"
+norm_path = "stat/biic_norm.pkl"
 origin_upstream_url = "microsoft/wavlm-base-plus"
 upstream_model = "wavlm-base-plus"
 epoch = 30
@@ -20,12 +21,12 @@ head_dim = 768
 hidden_dim = 768
 
 # Remote
-# [[experiments]]
-# name = "UpstreamFinetune-Reweight"
-# model_type = "UpstreamFinetune"
-# config = "base_config"
-# config_update = { loss_type = "DR" }
-#BalancedSoftmax Softmax Focal
+[[experiments]]
+name = "UpstreamFinetune-Reweight"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "Softmax" }
+# BalancedSoftmax Softmax Focal
 
 # Label Adaptive Mixup experiment
 # [[experiments]]
@@ -40,11 +41,11 @@ hidden_dim = 768
 # WBCE: Weighted Binary Cross-Entropy (class-weighted, per-class sigmoid)
 # KLD:  KL Divergence (no class weights, treats distribution as target)
 
-[[experiments]]
-name = "SoftLabel-WBCE-P"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
+# [[experiments]]
+# name = "SoftLabel-WBCE-P"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
 
 # [[experiments]]
 # name = "SoftLabel-WBCE-S"
@@ -86,22 +87,6 @@ config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
 # head_dim = 768
 # hidden_dim = 768
 
-# [[experiments]]
-# name = "Emotion2Vec-DR"
-# model_type = "UpstreamFinetune"
-# config = "base_config_e2v"
-# config_update = { loss_type = "Softmax" }
-
-#[[experiments]]
-#name = "Retraining with Leaky ReLU"
-#model_type = "UpstreamGender"
-#config = "base_config"
-#config_update = { use_gender = true, tags = [
-#    "Full set",
-#    "Gender Head",
-#    "Dual Head",
-#] }
-
 # [ref_config_emotion2vec] 
 # project = "NSTC"
 # corpus = "MSP-PODCAST"
@@ -122,3 +107,9 @@ config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
 # pooling_type = "AttentiveStatisticsPooling"
 # head_dim = 768
 # hidden_dim = 768
+
+# [[experiments]]
+# name = "Emotion2Vec-DR"
+# model_type = "UpstreamFinetune"
+# config = "base_config_e2v"
+# config_update = { loss_type = "Softmax" }
