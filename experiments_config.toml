@@ -21,11 +21,11 @@ head_dim = 768
 hidden_dim = 768
 
 # Remote
-[[experiments]]
-name = "UpstreamFinetune-Reweight"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "Softmax" }
+# [[experiments]]
+# name = "UpstreamFinetune-Reweight"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "Softmax" }
 # BalancedSoftmax Softmax Focal
 
 # Label Adaptive Mixup experiment
@@ -47,11 +47,11 @@ config_update = { loss_type = "Softmax" }
 # config = "base_config"
 # config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
 
-# [[experiments]]
-# name = "SoftLabel-WBCE-S"
-# model_type = "UpstreamFinetune"
-# config = "base_config"
-# config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
+[[experiments]]
+name = "SoftLabel-WBCE-S"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
 
 # [[experiments]]
 # name = "SoftLabel-KLD-P"
