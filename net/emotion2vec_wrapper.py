@@ -1,5 +1,6 @@
 # net/emotion2vec_wrapper.py
 
+import os
 import torch
 import torch.nn as nn
 
@@ -36,12 +37,14 @@ class Emotion2VecWrapper(nn.Module):
         except ImportError:
             raise ImportError("funasr is required for emotion2vec. Install: pip install funasr")
 
-        print(f"[Emotion2VecWrapper] Loading '{model_id}' via FunASR...")
+        resolved_model, model_path = self._resolve_funasr_path(model_id)
+        print(f"[Emotion2VecWrapper] Loading '{resolved_model}' via FunASR"
+              + (f" (model_path={model_path})" if model_path else "") + "...")
 
-        # model_id can be either:
-        # - HuggingFace model ID: "iic/emotion2vec_plus_base" (downloads from ModelScope)
-        # - Local path: "/path/to/emotion2vec_plus_base" (loads from disk)
-        funasr_automodel = FunASRAutoModel(model=model_id, device="cpu")
+        kwargs = {"model": resolved_model, "device": "cpu"}
+        if model_path:
+            kwargs["model_path"] = model_path
+        funasr_automodel = FunASRAutoModel(**kwargs)
         self._e2v = funasr_automodel.model  # underlying Emotion2vec nn.Module
 
         self.config = _FakeConfig(hidden_size=self.HIDDEN_SIZE)
@@ -63,6 +66,36 @@ class Emotion2VecWrapper(nn.Module):
                     f"Cannot find transformer encoder layers in {type(self._e2v).__name__}. "
                     f"Tried: blocks, encoder, transformer, layers."
                 )
+
+    @staticmethod
+    def _resolve_funasr_path(model_id: str):
+        """
+        FunASR downloads to {base}/models/{org}/{name}/config.yaml.
+        If given a base directory path, detect the nested structure and return
+        (model_name, model_path) so FunASR can locate the cached model.
+        Returns (model_id, None) for online model IDs (no local directory).
+        """
+        if not os.path.isdir(model_id):
+            return model_id, None  # online ID like "iic/emotion2vec_plus_base"
+
+        # Direct model directory: config.yaml sits right here
+        if os.path.isfile(os.path.join(model_id, "config.yaml")):
+            return model_id, None
+
+        # FunASR nested structure: {base}/models/{org}/{name}/config.yaml
+        models_dir = os.path.join(model_id, "models")
+        if os.path.isdir(models_dir):
+            for org in sorted(os.listdir(models_dir)):
+                org_path = os.path.join(models_dir, org)
+                if not os.path.isdir(org_path):
+                    continue
+                for name in sorted(os.listdir(org_path)):
+                    candidate = os.path.join(org_path, name)
+                    if os.path.isfile(os.path.join(candidate, "config.yaml")):
+                        return f"{org}/{name}", model_id
+
+        # Fallback: pass the path as-is and let FunASR raise a clear error
+        return model_id, None
 
     def freeze_feature_encoder(self):
         """Freeze CNN convolutional layers (analogous to WavLM's freeze_feature_encoder)."""
