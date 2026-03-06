@@ -4,9 +4,9 @@ import pandas as pd
 SPLIT_MAP = {
     "train": "Train",
     "dev": "Development",
-    "test1": "Test1",
-    "test2": "Test2",
-    "test3": "Test3"
+    "test": "Test",
+    # "test2": "Test2",
+    # "test3": "Test3"
 }
 
 # Load label
