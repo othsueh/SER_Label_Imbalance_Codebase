@@ -25,7 +25,8 @@ def run_evaluate(model_type, **kwargs):
         if wav_dir is None:
             wav_dir = corpus_config.get('PATH_TO_AUDIO')
         if label_path is None:
-            label_path = corpus_config.get('PATH_TO_LABEL')
+            label_key = kwargs.get('label_key', 'PATH_TO_LABEL')
+            label_path = corpus_config.get(label_key)
 
     if wav_dir is None or label_path is None:
         print(f"Warning: Could not resolve dataset paths for corpus '{corpus}'")
@@ -46,7 +47,7 @@ def run_evaluate(model_type, **kwargs):
         from utils.dataset.dataset import load_norm_stat
         wav_mean, wav_std = load_norm_stat(norm_path)
 
-    eval_dataset = SERDataset(wav_dir, label_path, split='test', wav_mean=wav_mean, wav_std=wav_std)
+    eval_dataset = SERDataset(wav_dir, label_path, split=split, wav_mean=wav_mean, wav_std=wav_std)
     eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=False, collate_fn=SERDataset.collate_fn, num_workers=4)
 
     # Load model from HF Hub
