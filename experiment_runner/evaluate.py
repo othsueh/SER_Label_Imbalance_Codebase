@@ -75,6 +75,7 @@ def run_evaluate(model_type, **kwargs):
         for batch in eval_loader:
             x, y, mask, _ = batch
             x = x.to(device)
+            mask = mask.to(device)
             y_indices = torch.argmax(y, dim=1)
 
             logits = model(x, attention_mask=mask)
