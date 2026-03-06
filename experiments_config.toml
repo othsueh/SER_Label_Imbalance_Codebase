@@ -53,11 +53,11 @@ config_update = { loss_type = "Focal" }
 # config = "base_config"
 # config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
 
-[[experiments]]
-name = "SoftLabel-WBCE-S"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
+# [[experiments]]
+# name = "SoftLabel-WBCE-S"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
 
 # [[experiments]]
 # name = "SoftLabel-KLD-P"

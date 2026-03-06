@@ -5,6 +5,13 @@ from transformers import AutoModel
 from net.pooling import AttentiveStatisticsPooling
 from net.ser import EmotionRegression
 
+# Map short model names (as stored in experiments_config) to full HF repo IDs
+_SSL_MODEL_ALIASES = {
+    'wavlm-base-plus': 'microsoft/wavlm-base-plus',
+    'wavlm-large': 'microsoft/wavlm-large',
+    'wavlm-base': 'microsoft/wavlm-base',
+}
+
 class SERModel(nn.Module):
     def __init__(self, ssl_type, pooling_type, head_dim, hidden_dim, classifier_output_dim, dropout=0.2, finetune_layers=3):
         super(SERModel, self).__init__()
@@ -53,9 +60,14 @@ class SERModel(nn.Module):
                  if pooling_type != "AttentiveStatisticsPooling":
                      raise ValueError(f"Unsupported pooling type: {pooling_type}")
 
+        # Normalize ssl_type for portable config storage (strip local path prefix)
+        canonical_ssl_type = ssl_type
+        if os.path.isabs(ssl_type) or ssl_type.startswith('./') or ssl_type.startswith('../'):
+            canonical_ssl_type = os.path.basename(ssl_type.rstrip('/\\'))
+
         # Store config for saving
         self.config = {
-            "ssl_type": ssl_type,
+            "ssl_type": canonical_ssl_type,
             "pooling_type": pooling_type,
             "head_dim": head_dim,
             "hidden_dim": hidden_dim,
@@ -122,7 +134,13 @@ class SERModel(nn.Module):
             
         with open(config_path, "r") as f:
             config = json.load(f)
-        
+
+        # Resolve short names / old local paths to full HF repo IDs
+        ssl = config.get('ssl_type', '')
+        if os.path.isabs(ssl) or ssl.startswith('./') or ssl.startswith('../'):
+            ssl = os.path.basename(ssl.rstrip('/\\'))
+        config['ssl_type'] = _SSL_MODEL_ALIASES.get(ssl, ssl)
+
         model = cls(**config)
         state_dict = torch.load(model_path, map_location="cpu")
         model.load_state_dict(state_dict)
