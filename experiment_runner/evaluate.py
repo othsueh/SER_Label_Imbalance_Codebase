@@ -2,6 +2,7 @@ import os
 import torch
 import wandb
 import numpy as np
+from tqdm.auto import tqdm
 from sklearn.metrics import f1_score, accuracy_score, recall_score
 from torch.utils.data import DataLoader
 from huggingface_hub import snapshot_download, HfApi
@@ -72,7 +73,7 @@ def run_evaluate(model_type, **kwargs):
     val_targets = []
 
     with torch.no_grad():
-        for batch in eval_loader:
+        for batch in tqdm(eval_loader, desc=f"Evaluating [{split}]"):
             x, y, mask, _ = batch
             x = x.to(device)
             mask = mask.to(device)
