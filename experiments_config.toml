@@ -10,7 +10,7 @@ learning_rate = 1e-5
 dropout = 0.5
 window = 5                                        # SMA window size for macro-F1 smoothing
 seed = 42
-tags = ["Re-weighting"]
+tags = ["Testing"]
 finetune_layers = 3
 num_layers = 3
 use_gender = false
@@ -21,12 +21,18 @@ head_dim = 768
 hidden_dim = 768
 
 # Remote
-# [[experiments]]
-# name = "UpstreamFinetune-Reweight"
-# model_type = "UpstreamFinetune"
-# config = "base_config"
-# config_update = { loss_type = "Softmax" }
+[[experiments]]
+name = "UpstreamFinetune-Reweight"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "Softmax" }
 # BalancedSoftmax Softmax Focal
+
+[[experiments]]
+name = "UpstreamFinetune-Reweight"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "Focal" }
 
 # Label Adaptive Mixup experiment
 # [[experiments]]
