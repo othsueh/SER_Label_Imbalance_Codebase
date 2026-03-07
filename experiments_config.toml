@@ -21,12 +21,17 @@ head_dim = 768
 hidden_dim = 768
 
 # Remote
-# [[experiments]]
-# name = "UpstreamFinetune-Reweight"
-# model_type = "UpstreamFinetune"
-# config = "base_config"
-# config_update = { loss_type = "Softmax" }
-# # BalancedSoftmax Softmax Focal
+[[experiments]]
+name = "UpstreamFinetune-Reweight"
+model_type = "UpstreamFinetune"
+config = "base_config"
+config_update = { loss_type = "BalancedSoftmax" }
+# BalancedSoftmax Softmax Focal
+
+[[experiments]]
+name = "UpstreamFinetune-Reweight"
+model_type = "UpstreamFinetune"
+config = "base_config"
 
 # [[experiments]]
 # name = "UpstreamFinetune-Reweight"
@@ -35,11 +40,11 @@ hidden_dim = 768
 # config_update = { loss_type = "Focal" }
 
 # Label Adaptive Mixup experiment
-[[experiments]]
-name = "UpstreamFinetune-LAM"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { name = "LAM", use_mixup = true, mixup_p = 0.5 }
+# [[experiments]]
+# name = "UpstreamFinetune-LAM"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { name = "LAM", use_mixup = true, mixup_p = 0.5 }
 
 # --- Soft-label experiments (Shamsi et al. Odyssey 2024 / Chou et al. 2024) ---
 # P-type: soft labels from primary annotations only (fraction of annotators per emotion)
