@@ -320,3 +320,6 @@ xxhash==3.6.0
     # via datasets
 yarl==1.22.0
     # via aiohttp
+
+# Add funasr temporarily for testing
+funasr

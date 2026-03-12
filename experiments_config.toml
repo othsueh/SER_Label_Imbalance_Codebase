@@ -1,24 +1,24 @@
-[base_config]
-project = "NSTC"
-corpus = "MSP-PODCAST"
-norm_path = "stat/msp_norm.pkl"
-origin_upstream_url = "microsoft/wavlm-base-plus"
-upstream_model = "wavlm-base-plus"
-epoch = 30
-batch_size = 16                                   # Can likely increase to 32 or 64 with Base model
-learning_rate = 1e-5
-dropout = 0.5
-window = 5                                        # SMA window size for macro-F1 smoothing
-seed = 42
-tags = ["Testing"]
-finetune_layers = 3
-num_layers = 3
-use_gender = false
-ckpt_name = "None"
-loss_type = "WeightedCrossEntropy"
-pooling_type = "AttentiveStatisticsPooling"
-head_dim = 768
-hidden_dim = 768
+# [base_config]
+# project = "NSTC"
+# corpus = "MSP-PODCAST"
+# norm_path = "stat/msp_norm.pkl"
+# origin_upstream_url = "microsoft/wavlm-base-plus"
+# upstream_model = "wavlm-base-plus"
+# epoch = 30
+# batch_size = 16                                   # Can likely increase to 32 or 64 with Base model
+# learning_rate = 1e-5
+# dropout = 0.5
+# window = 5                                        # SMA window size for macro-F1 smoothing
+# seed = 42
+# tags = ["Testing"]
+# finetune_layers = 3
+# num_layers = 3
+# use_gender = false
+# ckpt_name = "None"
+# loss_type = "WeightedCrossEntropy"
+# pooling_type = "AttentiveStatisticsPooling"
+# head_dim = 768
+# hidden_dim = 768
 
 # # Remote
 # [[experiments]]
@@ -82,10 +82,11 @@ hidden_dim = 768
 # config = "base_config"
 # config_update = { loss_type = "KLD", label_key = "PATH_TO_LABEL_SOFT_S" }
 
-# Emotion2Vec-DR Softmax experiment
-[base_config_e2v] 
+# Emotion2Vec-DR Testing
+[base_config] 
 project = "NSTC"
 corpus = "MSP-PODCAST"
+norm_path = "stat/msp_norm.pkl"
 origin_upstream_url = "emotion2vec/emotion2vec_plus_base"
 upstream_model = "emotion2vec_plus_base"
 epoch = 30
@@ -107,17 +108,17 @@ hidden_dim = 768
 [[experiments]]
 name = "Emotion2Vec-WeightedSoftmax"
 model_type = "UpstreamFinetune"
-config = "base_config_e2v"
+config = "base_config"
 config_update = { loss_type = "WeightedCrossEntropy" }
 
 # [[experiments]]
 # name = "Emotion2Vec-SoftLabel-WBCE-S"
 # model_type = "UpstreamFinetune"
-# config = "base_config_e2v"
+# config = "base_config"
 # config_update = { name = "S", loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
 
 # [[experiments]]
 # name = "Emotion2Vec-LAM"
 # model_type = "UpstreamFinetune"
-# config = "base_config_e2v"
+# config = "base_config"
 # config_update = { loss_type = "WeightedCrossEntropy", name = "LAM", use_mixup = true, mixup_p = 0.5 }
