@@ -20,37 +20,37 @@ pooling_type = "AttentiveStatisticsPooling"
 head_dim = 768
 hidden_dim = 768
 
-# Remote
-[[experiments]]
-name = "UpstreamFinetune-Reweight"
-model_type = "UpstreamFinetune"
-config = "base_config"
+# # Remote
+# [[experiments]]
+# name = "UpstreamFinetune-Reweight"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
 
-[[experiments]]
-name = "UpstreamFinetune-Reweight"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "BalancedSoftmax" }
-# BalancedSoftmax Softmax Focal
+# [[experiments]]
+# name = "UpstreamFinetune-Reweight"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "BalancedSoftmax" }
+# # BalancedSoftmax Softmax Focal
 
-[[experiments]]
-name = "UpstreamFinetune-Reweight"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "Softmax" }
+# [[experiments]]
+# name = "UpstreamFinetune-Reweight"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "Softmax" }
 
-[[experiments]]
-name = "UpstreamFinetune-Reweight"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { loss_type = "Focal" }
+# [[experiments]]
+# name = "UpstreamFinetune-Reweight"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { loss_type = "Focal" }
 
-# Label Adaptive Mixup experiment
-[[experiments]]
-name = "UpstreamFinetune-LAM"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { name = "LAM", use_mixup = true, mixup_p = 0.5 }
+# # Label Adaptive Mixup experiment
+# [[experiments]]
+# name = "UpstreamFinetune-LAM"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { name = "LAM", use_mixup = true, mixup_p = 0.5 }
 
 # --- Soft-label experiments (Shamsi et al. Odyssey 2024 / Chou et al. 2024) ---
 # P-type: soft labels from primary annotations only (fraction of annotators per emotion)
@@ -58,17 +58,17 @@ config_update = { name = "LAM", use_mixup = true, mixup_p = 0.5 }
 # WBCE: Weighted Binary Cross-Entropy (class-weighted, per-class sigmoid)
 # KLD:  KL Divergence (no class weights, treats distribution as target)
 
-[[experiments]]
-name = "SoftLabel-WBCE-P"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { name = "P", loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
+# [[experiments]]
+# name = "SoftLabel-WBCE-P"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { name = "P", loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_P" }
 
-[[experiments]]
-name = "SoftLabel-WBCE-S"
-model_type = "UpstreamFinetune"
-config = "base_config"
-config_update = { name = "S", loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
+# [[experiments]]
+# name = "SoftLabel-WBCE-S"
+# model_type = "UpstreamFinetune"
+# config = "base_config"
+# config_update = { name = "S", loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
 
 # [[experiments]]
 # name = "SoftLabel-KLD-P"
@@ -83,29 +83,41 @@ config_update = { name = "S", loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOF
 # config_update = { loss_type = "KLD", label_key = "PATH_TO_LABEL_SOFT_S" }
 
 # Emotion2Vec-DR Softmax experiment
-# [base_config_e2v] 
-# project = "NSTC"
-# corpus = "MSP-PODCAST"
-# origin_upstream_url = "emotion2vec/emotion2vec_plus_base"
-# upstream_model = "emotion2vec_plus_base"
-# epoch = 30
-# batch_size = 16
-# learning_rate = 1e-5
-# dropout = 0.5
-# window = 5
-# seed = 42
-# tags = ["emotion2vec", "Re-weighting"]
-# finetune_layers = 2
-# num_layers = 3
-# use_gender = false
-# ckpt_name = "None"
-# loss_type = "Softmax"
-# pooling_type = "AttentiveStatisticsPooling"
-# head_dim = 768
-# hidden_dim = 768
+[base_config_e2v] 
+project = "NSTC"
+corpus = "MSP-PODCAST"
+origin_upstream_url = "emotion2vec/emotion2vec_plus_base"
+upstream_model = "emotion2vec_plus_base"
+epoch = 30
+batch_size = 16
+learning_rate = 1e-5
+dropout = 0.5
+window = 5
+seed = 42
+tags = ["emotion2vec", "Re-weighting"]
+finetune_layers = 2
+num_layers = 3
+use_gender = false
+ckpt_name = "None"
+loss_type = "WeightedCrossEntropy"
+pooling_type = "AttentiveStatisticsPooling"
+head_dim = 768
+hidden_dim = 768
+
+[[experiments]]
+name = "Emotion2Vec-WeightedSoftmax"
+model_type = "UpstreamFinetune"
+config = "base_config_e2v"
+config_update = { loss_type = "WeightedCrossEntropy" }
 
 # [[experiments]]
-# name = "Emotion2Vec-Softmax"
+# name = "Emotion2Vec-SoftLabel-WBCE-S"
 # model_type = "UpstreamFinetune"
 # config = "base_config_e2v"
-# config_update = { loss_type = "Softmax" }
+# config_update = { name = "S", loss_type = "WBCE", label_key = "PATH_TO_LABEL_SOFT_S" }
+
+# [[experiments]]
+# name = "Emotion2Vec-LAM"
+# model_type = "UpstreamFinetune"
+# config = "base_config_e2v"
+# config_update = { loss_type = "WeightedCrossEntropy", name = "LAM", use_mixup = true, mixup_p = 0.5 }
